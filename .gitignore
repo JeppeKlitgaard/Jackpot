@@ -1,0 +1,10 @@
+# Venv
+venv
+.venv
+
+# Mypy
+.mypy_cache
+
+# Python
+__pycache__
+*.py[cod]

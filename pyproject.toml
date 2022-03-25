@@ -1,0 +1,44 @@
+[tool.poetry]
+name = "isingmodel"
+version = "0.1.0"
+description = "A pure python implementation of the Ising Model using the Metropolis algorithm"
+authors = ["Jeppe Klitgaard <hi@jeppe.science>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.11"
+numpy = "^1.21"
+matplotlib = "^3.5.1"
+numba = "^0.55.1"
+scipy = "^1.8.0"
+ipywidgets = "^7.7.0"
+jax = {extras = ["cpu"], version = "^0.3.4"}
+
+[tool.poetry.dev-dependencies]
+black = "^22.1.0"
+mypy = "^0.942"
+ipykernel = "^6.9.2"
+
+# Mypy
+[tool.mypy]
+python_version = "3.10"
+strict = true
+show_error_codes = true
+
+plugins = ["numpy.typing.mypy_plugin"]
+
+[[tool.mypy.overrides]]
+module = "numpy.*"
+disallow_untyped_calls = false
+
+[[tool.mypy.overrides]]
+module = ["matplotlib.*", "scipy.*"]
+ignore_missing_imports = true
+
+# Black
+[tool.black]
+target-version = ["py310"]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
