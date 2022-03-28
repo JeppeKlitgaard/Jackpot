@@ -13,12 +13,17 @@ numba = "^0.55.1"
 scipy = "^1.8.0"
 ipywidgets = "^7.7.0"
 jax = {extras = ["cpu"], version = "^0.3.4"}
+tqdm = "^4.63.1"
+joblib = "^1.1.0"
 
 [tool.poetry.dev-dependencies]
 black = "^22.1.0"
 mypy = "^0.942"
 ipykernel = "^6.9.2"
 
+tensorboard = "^2.8.0"
+tensorboard-plugin-profile = "^2.5.0"
+tensorflow = "^2.8.0"
 # Mypy
 [tool.mypy]
 python_version = "3.10"
