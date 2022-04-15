@@ -15,6 +15,7 @@ ipywidgets = "^7.7.0"
 jax = {extras = ["cpu"], version = "^0.3.4"}
 tqdm = "^4.63.1"
 joblib = "^1.1.0"
+uncertainties = "^3.1.6"
 
 [tool.poetry.dev-dependencies]
 black = "^22.1.0"
@@ -24,20 +25,23 @@ ipykernel = "^6.9.2"
 tensorboard = "^2.8.0"
 tensorboard-plugin-profile = "^2.5.0"
 tensorflow = "^2.8.0"
+pytest = "^7.1.1"
 # Mypy
 [tool.mypy]
 python_version = "3.10"
 strict = true
 show_error_codes = true
 
+files = ["ising"]
+
 plugins = ["numpy.typing.mypy_plugin"]
 
 [[tool.mypy.overrides]]
-module = "numpy.*"
+module = ["numpy.*", "jax.*"]
 disallow_untyped_calls = false
 
 [[tool.mypy.overrides]]
-module = ["matplotlib.*", "scipy.*"]
+module = ["matplotlib.*", "scipy.*", "joblib.*"]
 ignore_missing_imports = true
 
 # Black
