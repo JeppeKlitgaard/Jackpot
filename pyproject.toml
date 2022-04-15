@@ -16,6 +16,7 @@ jax = {extras = ["cpu"], version = "^0.3.4"}
 tqdm = "^4.63.1"
 joblib = "^1.1.0"
 uncertainties = "^3.1.6"
+plotly = "^5.7.0"
 
 [tool.poetry.dev-dependencies]
 black = "^22.1.0"

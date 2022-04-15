@@ -5,7 +5,6 @@ import numpy as np
 import jax.numpy as jnp
 from jax import random
 import jax
-from jax.scipy.signal import convolve
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
@@ -17,14 +16,10 @@ from ising.primitives import (
     TBCModes,
     get_hamiltonian,
     get_magnetisation_density,
-    run_mcmc_step,
-    run_mcmc_steps,
     temperature_to_beta,
-    vrun_mcmc_steps,
     pvrun_mcmc_steps,
     pvget_equilibrium_energy_and_magnetisation,
 )
-from joblib import Parallel, delayed
 
 from ising.utils.types import lists_to_tuples
 
@@ -295,11 +290,6 @@ class IsingModelND:
         rng_keys__ = jnp.stack(jnp.split(rng_keys_, ND))
         betas__ = jnp.stack(jnp.split(betas_, ND))
 
-        print(states__.shape)
-        print(rng_keys__.shape)
-        print(betas__.shape)
-
-
         energies_and_magnetisations = jnp.asarray(pvget_equilibrium_energy_and_magnetisation(
             states__,
             rng_keys__,
@@ -323,6 +313,3 @@ class IsingModelND:
         )
 
         return flattened_energies_and_magnetisations
-
-
-    def plot_properties()
