@@ -18,10 +18,26 @@ plotly = "^5.14.0"
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.22.0"
+
 mypy = "^1.1.1"
 ruff = "^0.0.261"
 
+poethepoet = "^0.19.0"
+
 pytest = "^7.2.2"
+
+# Poe
+black = "^23.3.0"
+[tool.poe.tasks]
+lint = {cmd = "ruff .", help = "Run ruff"}
+check = {cmd = "mypy", help = "Run mypy"}
+test = {cmd = "pytest", help = "Run pytest"}
+
+dev = [
+    "lint",
+    "check",
+    "test",
+]
 
 # Mypy
 [tool.mypy]
@@ -43,7 +59,7 @@ ignore_missing_imports = true
 
 # Ruff
 [tool.ruff]
-target-version = ["py311"]
+target-version = "py311"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
