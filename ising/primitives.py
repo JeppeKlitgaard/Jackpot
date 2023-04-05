@@ -3,13 +3,13 @@ This file contains 'primitives' for the `ising` package.
 
 Primitives are jittable pure functions.
 """
+from jax import Array
 from jax import lax
 from jax import random
 from jax import jit, pmap, vmap
 from jax.random import KeyArray
 import jax.numpy as jnp
-import numpy as np
-from ising.typing import TSpins, TSpin
+from ising.typing import TSpins, TSpin, ScalarFloat
 from typing import Any, Literal
 from functools import partial
 from jax.scipy.signal import convolve
@@ -18,8 +18,9 @@ from scipy import constants
 TBCModes = Literal["constant", "periodic"]
 
 
-def temperature_to_beta(temperature_or_temperatures: float) -> float:
-    return 1 / (constants.Boltzmann * temperature_or_temperatures)
+def temperature_to_beta(temperature_or_temperatures: ScalarFloat) -> ScalarFloat:
+    reciprocal: ScalarFloat = constants.Boltzmann * temperature_or_temperatures
+    return 1.0 / reciprocal
 
 
 def get_random_point_idx(
@@ -94,7 +95,7 @@ def get_hamiltonian_delta(
     nuclear_magnetic_moment: float,
     bc_mode: TBCModes,
     bc_mode_value: float | None = None,
-) -> float:
+) -> ScalarFloat:
     """
     Calculates the Hamiltonian Delta by only considering nearest neighbours.
     This is much more efficient than calculating the Hamiltonian for each
@@ -107,7 +108,7 @@ def get_hamiltonian_delta(
     Introduction of if statements to do manual tree-shaking would at best
     slow down tracing process and at worst lead to slower runtimes.
     """
-    H = 0.0
+    H: ScalarFloat = 0.0
 
     current_spin = state[idx]
     delta_spin = trial_spin - current_spin
@@ -161,10 +162,10 @@ def get_hamiltonian(
     interaction_bicubic: float,
     interaction_external_field: float,
     nuclear_magnetic_moment: float,
-) -> float:
+) -> ScalarFloat:
     kernel = jnp.asarray(nn_kernel)
 
-    H: float = 0
+    H: ScalarFloat = jnp.asarray(0.0)
     state_sq = jnp.square(state)
 
     # J - Calculate bilinear exchange energy (nearest neighbour)
@@ -193,7 +194,7 @@ def get_hamiltonian(
 
 
 @partial(jit, static_argnames=("nuclear_magnetic_moment",))
-def get_magnetisation_density(state: TSpins, nuclear_magnetic_moment: float) -> float:
+def get_magnetisation_density(state: TSpins, nuclear_magnetic_moment: float) -> Array:
     return nuclear_magnetic_moment * jnp.sum(state) / jnp.size(state)
 
 
@@ -254,7 +255,7 @@ def run_mcmc_step(
     def if_energy_higher(
         state: TSpins, idx: tuple[int, ...], trial_spin: TSpin
     ) -> TSpins:
-        return lax.cond(
+        out: Array = lax.cond(
             jnp.exp(-beta * H_delta) > random.uniform(boltzmann_key),
             lambda s, i, t: s.at[i].set(t),
             lambda s, i, t: s,
@@ -262,10 +263,12 @@ def run_mcmc_step(
             idx,
             trial_spin,
         )
+        return out
 
-    return lax.cond(
+    out: Array = lax.cond(
         H_delta < 0, if_energy_lower, if_energy_higher, state, idx, trial_spin
     )
+    return out
 
 
 @partial(
@@ -297,11 +300,10 @@ def run_mcmc_steps(
     bc_mode: TBCModes,
     bc_mode_value: float | None = None,
 ) -> TSpins:
-
     keys = random.split(rng_key, steps)
 
     def body_fun(i: int, state: TSpins) -> TSpins:
-        return run_mcmc_step(
+        out: Array = run_mcmc_step(
             keys[i],
             state,
             possible_states,
@@ -315,8 +317,10 @@ def run_mcmc_steps(
             bc_mode=bc_mode,
             bc_mode_value=bc_mode_value,
         )
+        return out
 
-    return lax.fori_loop(0, steps, body_fun, state)
+    out: Array = lax.fori_loop(0, steps, body_fun, state)
+    return out
 
 
 vrun_mcmc_steps = jit(
@@ -397,7 +401,6 @@ def get_equilibrium_energy_and_magnetisation(
     bc_mode: TBCModes,
     bc_mode_value: float | None = None,
 ):
-
     new_state = run_mcmc_step(
         rng_key,
         state,

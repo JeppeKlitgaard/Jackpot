@@ -32,6 +32,7 @@ black = "^23.3.0"
 lint = {cmd = "ruff .", help = "Run ruff"}
 check = {cmd = "mypy", help = "Run mypy"}
 test = {cmd = "pytest", help = "Run pytest"}
+ruff-fix = {cmd = "ruff --fix .", help = "Run ruff with fix"}
 
 dev = [
     "lint",
@@ -39,11 +40,17 @@ dev = [
     "test",
 ]
 
+fix = [
+    "ruff-fix",
+]
+
 # Mypy
 [tool.mypy]
 python_version = "3.11"
 strict = true
 show_error_codes = true
+
+disallow_untyped_calls = false
 
 files = ["ising"]
 

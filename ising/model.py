@@ -11,7 +11,7 @@ from matplotlib.figure import Figure
 import matplotlib.patches as mpatches
 from scipy.ndimage import generate_binary_structure
 from scipy import constants
-from ising.typing import TSpins, TSpin
+from ising.typing import TSpins, TSpin, ScalarInt
 from ising.primitives import (
     TBCModes,
     get_hamiltonian,
@@ -152,7 +152,10 @@ class IsingModelND:
 
         # Generate a random initial state
         if initial_state is not None:
-            self.initial_state = jnp.asarray(initial_state, dtype=TSpin)
+            assert spin_states is not None
+            cast_ini_state = jnp.asarray(initial_state, dtype=TSpin)
+            cast_spin_states = tuple(spin_states)
+            self.initial_state = IsingStateND(cast_ini_state, cast_spin_states)
         else:
             self.initial_state = self.get_random_state()
 
@@ -161,13 +164,12 @@ class IsingModelND:
         self._nn_kernel = lists_to_tuples(__nn_kernel.tolist())
 
     @property
-    def rng_key(self) -> int:
+    def rng_key(self) -> ScalarInt:
         """
         Splits the RNG key and returns a fresh key.
         """
-        self._rng_key, k = random.split(self._rng_key)
-
-        return cast(int, k)
+        self._rng_key, k = cast(tuple[ScalarInt, ScalarInt], random.split(self._rng_key))
+        return k
 
     def get_random_state(self) -> IsingStateND:
         arr: TSpins = random.choice(
@@ -214,7 +216,6 @@ class IsingModelND:
         bc_mode: TBCModes = "constant",
         bc_mode_value: float | None = 0.0,
     ) -> None:
-
         temperatures = jnp.array(
             (
                 [temperature_or_temperatures]
@@ -290,21 +291,23 @@ class IsingModelND:
         rng_keys__ = jnp.stack(jnp.split(rng_keys_, ND))
         betas__ = jnp.stack(jnp.split(betas_, ND))
 
-        energies_and_magnetisations = jnp.asarray(pvget_equilibrium_energy_and_magnetisation(
-            states__,
-            rng_keys__,
-            states[0].spin_states,
-            betas__,
-            self._nn_kernel,
-            self.interaction_bilinear,
-            self.interaction_biquadratic,
-            self.interaction_anisotropy,
-            self.interaction_bicubic,
-            self.interaction_external_field,
-            self.nuclear_magnetic_moment,
-            bc_mode,
-            bc_mode_value,
-        ))
+        energies_and_magnetisations = jnp.asarray(
+            pvget_equilibrium_energy_and_magnetisation(
+                states__,
+                rng_keys__,
+                states[0].spin_states,
+                betas__,
+                self._nn_kernel,
+                self.interaction_bilinear,
+                self.interaction_biquadratic,
+                self.interaction_anisotropy,
+                self.interaction_bicubic,
+                self.interaction_external_field,
+                self.nuclear_magnetic_moment,
+                bc_mode,
+                bc_mode_value,
+            )
+        )
 
         energies_and_magnetisations = jnp.moveaxis(energies_and_magnetisations, 0, -1)
 

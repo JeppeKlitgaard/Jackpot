@@ -1,8 +1,7 @@
 from typing import Any
 
 
-
-def lists_to_tuples(lst: list[Any]) -> tuple[Any]:
+def lists_to_tuples(lst: list[Any]) -> tuple[Any, ...]:
     """
     Recursively transform nested lists to nested tuples.
     """

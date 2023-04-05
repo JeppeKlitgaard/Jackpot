@@ -1,6 +1,12 @@
 
 import numpy as np
-import numpy.typing as npt
+from jax import Array
 
-TSpin = np.float64
-TSpins = npt.NDArray[TSpin]
+Float = np.float64
+Integer = int
+
+ScalarFloat = Float | float | Array
+ScalarInt = Integer | Array
+
+TSpin = Float
+TSpins = Array
