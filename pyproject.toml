@@ -6,30 +6,26 @@ authors = ["Jeppe Klitgaard <hi@jeppe.science>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.11"
-numpy = "^1.21"
-matplotlib = "^3.5.1"
-numba = "^0.55.1"
-scipy = "^1.8.0"
-ipywidgets = "^7.7.0"
+python = ">=3.11,<3.12"
+numpy = "^1.24.2"
+matplotlib = "^3.7.1"
+scipy = "^1.10.1"
+ipywidgets = "^8.0.6"
 jax = {extras = ["cpu"], version = "^0.3.4"}
-tqdm = "^4.63.1"
-joblib = "^1.1.0"
-uncertainties = "^3.1.6"
-plotly = "^5.7.0"
+tqdm = "^4.65.0"
+uncertainties = "^3.1.7"
+plotly = "^5.14.0"
 
-[tool.poetry.dev-dependencies]
-black = "^22.1.0"
-mypy = "^0.942"
-ipykernel = "^6.9.2"
+[tool.poetry.group.dev.dependencies]
+ipykernel = "^6.22.0"
+mypy = "^1.1.1"
+ruff = "^0.0.261"
 
-tensorboard = "^2.8.0"
-tensorboard-plugin-profile = "^2.5.0"
-tensorflow = "^2.8.0"
-pytest = "^7.1.1"
+pytest = "^7.2.2"
+
 # Mypy
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 strict = true
 show_error_codes = true
 
@@ -42,12 +38,12 @@ module = ["numpy.*", "jax.*"]
 disallow_untyped_calls = false
 
 [[tool.mypy.overrides]]
-module = ["matplotlib.*", "scipy.*", "joblib.*"]
+module = ["matplotlib.*", "scipy.*"]
 ignore_missing_imports = true
 
-# Black
-[tool.black]
-target-version = ["py310"]
+# Ruff
+[tool.ruff]
+target-version = ["py311"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
