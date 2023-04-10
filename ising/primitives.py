@@ -9,13 +9,30 @@ from jax import random
 from jax import jit, pmap, vmap
 from jax.random import KeyArray
 import jax.numpy as jnp
-from ising.typing import TSpins, TSpin, ScalarFloat
+from ising.typing import TSpins, TSpin, ScalarFloat, RNGKey
 from typing import Any, Literal
 from functools import partial
 from jax.scipy.signal import convolve
 from scipy import constants
+import numpy as np
 
 TBCModes = Literal["constant", "periodic"]
+
+
+def get_random_point_idx2(rng_key: RNGKey, shape: tuple[int, ...]) -> tuple[int, ...]:
+    dim = len(shape)
+
+    minvals = np.zeros(dim)
+    maxvals = np.asarray(shape)
+
+    idx = random.randint(key=rng_key, shape=(dim,), minval=minvals, maxval=maxvals)
+
+    return idx
+
+get_random_point_idx2 = jit(
+    get_random_point_idx2, static_argnames=("shape")
+)
+
 
 
 def temperature_to_beta(temperature_or_temperatures: ScalarFloat) -> ScalarFloat:

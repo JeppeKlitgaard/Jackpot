@@ -360,6 +360,23 @@ files = [
 ]
 
 [[package]]
+name = "equinox"
+version = "0.10.2"
+description = "PyTorch-like neural networks in JAX"
+category = "main"
+optional = false
+python-versions = "~=3.8"
+files = [
+    {file = "equinox-0.10.2-py3-none-any.whl", hash = "sha256:74cd4334bbadcd14f53144151f9d2f0ce9be9b82d2ab0f9947ee19ca2d553b79"},
+    {file = "equinox-0.10.2.tar.gz", hash = "sha256:7502cc42bda248b100b2df018d62b67732bf0f430bb1212b8187fb2074294733"},
+]
+
+[package.dependencies]
+jax = ">=0.4.4"
+jaxtyping = ">=0.2.14"
+typing-extensions = ">=4.5.0"
+
+[[package]]
 name = "executing"
 version = "1.2.0"
 description = "Get the currently executing AST node of a frame, and other information"
@@ -551,6 +568,26 @@ minimum-jaxlib = ["jaxlib (==0.4.7)"]
 tpu = ["jaxlib (==0.4.7)", "libtpu-nightly (==0.1.dev20230327)", "requests"]
 
 [[package]]
+name = "jax-dataclasses"
+version = "1.5.1"
+description = "Dataclasses + JAX"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "jax_dataclasses-1.5.1-py3-none-any.whl", hash = "sha256:6253bae168ea477c5cf0fc4b993aecf26052f329dfaf6a2d8969e1ea69279b21"},
+    {file = "jax_dataclasses-1.5.1.tar.gz", hash = "sha256:b2ae33f69b2058fc61be1eca618fbc27516e009698241a140de4da20b9d505ef"},
+]
+
+[package.dependencies]
+jax = "*"
+jaxlib = "*"
+typing-extensions = "*"
+
+[package.extras]
+testing = ["flax", "pytest", "pytest-cov"]
+
+[[package]]
 name = "jaxlib"
 version = "0.4.7"
 description = "XLA library for JAX"
@@ -576,6 +613,23 @@ files = [
 ml-dtypes = ">=0.0.3"
 numpy = ">=1.21"
 scipy = ">=1.7"
+
+[[package]]
+name = "jaxtyping"
+version = "0.2.14"
+description = "Type annotations and runtime checking for shape and dtype of JAX arrays, and PyTrees."
+category = "main"
+optional = false
+python-versions = "~=3.8"
+files = [
+    {file = "jaxtyping-0.2.14-py3-none-any.whl", hash = "sha256:91de0ef79a7ee497c4b5c08f096edbcfc7627bec71e865caaf6748e8175e8627"},
+    {file = "jaxtyping-0.2.14.tar.gz", hash = "sha256:5b78abbba18e0ca5b4c0870c965e204e0cdfadc1d385c24a0e1fcc15d6b3680d"},
+]
+
+[package.dependencies]
+numpy = ">=1.20.0"
+typeguard = ">=2.13.3"
+typing-extensions = ">=3.7.4.1"
 
 [[package]]
 name = "jedi"
@@ -1643,10 +1697,26 @@ docs = ["myst-parser", "pydata-sphinx-theme", "sphinx"]
 test = ["argcomplete (>=2.0)", "pre-commit", "pytest", "pytest-mock"]
 
 [[package]]
+name = "typeguard"
+version = "3.0.2"
+description = "Run-time type checker for Python"
+category = "main"
+optional = false
+python-versions = ">=3.7.4"
+files = [
+    {file = "typeguard-3.0.2-py3-none-any.whl", hash = "sha256:bbe993854385284ab42fd5bd3bee6f6556577ce8b50696d6cb956d704f286c8e"},
+    {file = "typeguard-3.0.2.tar.gz", hash = "sha256:fee5297fdb28f8e9efcb8142b5ee219e02375509cd77ea9d270b5af826358d5a"},
+]
+
+[package.extras]
+doc = ["packaging", "sphinx-autodoc-typehints (>=1.2.0)", "sphinx-rtd-theme"]
+test = ["mypy (>=0.991)", "pytest (>=7)"]
+
+[[package]]
 name = "typing-extensions"
 version = "4.5.0"
 description = "Backported and Experimental Type Hints for Python 3.7+"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -1702,4 +1772,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "a32aba44aa08798299c13a049ab07f6b6137d3bb74a847ebd94c502f99e172da"
+content-hash = "af71dc3486e23e68369bb69d20cf087d13042ef0e712634791d21cea13b5da00"
