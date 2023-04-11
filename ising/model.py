@@ -168,7 +168,9 @@ class IsingModelND:
         """
         Splits the RNG key and returns a fresh key.
         """
-        self._rng_key, k = cast(tuple[ScalarInt, ScalarInt], random.split(self._rng_key))
+        self._rng_key, k = cast(
+            tuple[ScalarInt, ScalarInt], random.split(self._rng_key)
+        )
         return k
 
     def get_random_state(self) -> IsingStateND:
