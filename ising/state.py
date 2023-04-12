@@ -11,12 +11,13 @@ from jaxtyping import Float, Int
 from matplotlib.figure import Figure
 
 from ising.algorithms import metropolis_hastings_move
+from ising.module import EnsamblableModule
 from ising.primitives2 import get_hamiltonian, get_magnetisation_density
 from ising.types import Algorithm, BCMode
 from ising.typing import RNGKey, TFloatParam, TShape, TSpin
 
 
-class Environment(eqx.Module):
+class Environment(EnsamblableModule):
     """
     Dataclass that holds details about the environment of the model.
 
@@ -92,7 +93,7 @@ class Environment(eqx.Module):
         )
 
 
-class Measurements(eqx.Module):
+class Measurements(EnsamblableModule):
     """
     Represents one or more measurements of the system taken at a particular
     step for the state with the given id.
@@ -104,8 +105,12 @@ class Measurements(eqx.Module):
     energy: Float[Array, "a"]
     magnetisation_density: Float[Array, "a"]
 
+    @property
+    def vectorisation_shape(self) -> TShape:
+        return self.energy.shape[:-1]
 
-class State(eqx.Module):
+
+class State(EnsamblableModule):
     """
     Represents an (immutable) state of the system.
     """
@@ -119,12 +124,12 @@ class State(eqx.Module):
     steps: Int[Array, "1"] = 0
 
     @property
-    def shape(self) -> tuple[int, ...]:
-        return self.spins.shape
+    def shape(self) -> TShape:
+        return self.spins.shape[-self.dim:]
 
     @property
-    def is_vectorised(self) -> bool:
-        return not self.spins.ndim == self.dim
+    def vectorisation_shape(self) -> TShape:
+        return self.spins.shape[:-self.dim]
 
     @classmethod
     @eqx.filter_jit
