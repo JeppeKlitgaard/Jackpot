@@ -73,6 +73,7 @@ target-version = "py311"
 
 ignore = [
     "E731",
+    "F821",
 ]
 
 [build-system]

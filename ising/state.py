@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from jax import Array, lax, random
 from jax.random import KeyArray
+from jaxtyping import Float, Int
 from matplotlib.figure import Figure
 
 from ising.algorithms import metropolis_hastings_move
@@ -26,7 +27,7 @@ class Environment(eqx.Module):
     spin_states: tuple[TSpin, ...] = eqx.static_field()
 
     # Coldness
-    beta: TFloatParam
+    beta: Float[Array, "dim"]
 
     # Interaction parameters
     interaction_bilinear: TFloatParam = eqx.static_field()
@@ -97,11 +98,11 @@ class Measurements(eqx.Module):
     step for the state with the given id.
     """
 
-    steps: int
-    state_id: int
+    steps: Int[Array, "1"]
+    state_id: Int[Array, "1"]
 
-    energy: Array
-    magnetisation_density: Array
+    energy: Float[Array, "a"]
+    magnetisation_density: Float[Array, "a"]
 
 
 class State(eqx.Module):
@@ -109,13 +110,13 @@ class State(eqx.Module):
     Represents an (immutable) state of the system.
     """
 
-    spins: Array
-    dim: int = eqx.static_field()
+    spins: Float[Array, "*dims"]
+    dim: Int[Array, "1"] = eqx.static_field()
 
     env: Environment
 
-    id_: int
-    steps: int = 0
+    id_: Int[Array, "1"]
+    steps: Int[Array, "1"] = 0
 
     @property
     def shape(self) -> tuple[int, ...]:
