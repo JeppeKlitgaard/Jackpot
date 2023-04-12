@@ -1,5 +1,6 @@
 from enum import StrEnum, auto
 
+
 class BCMode(StrEnum):
     CONSTANT = auto()
     PERIODIC = auto()

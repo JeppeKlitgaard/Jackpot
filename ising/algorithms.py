@@ -2,17 +2,19 @@
 Contains algorithms for propagating a State in time.
 """
 from __future__ import annotations
-from ising.primitives2 import get_random_point_idx, get_hamiltonian_delta
-from jax import random
-import numpy as np
-from jax import Array, lax
-import jax.numpy as jnp
-import equinox as eqx
+
 from typing import TYPE_CHECKING
 
+import equinox as eqx
+import jax.numpy as jnp
+import numpy as np
+from jax import Array, lax, random
+
+from ising.primitives2 import get_hamiltonian_delta, get_random_point_idx
+
 if TYPE_CHECKING:
-    from ising.typing import RNGKey, TSpin, TSpins
     from ising.state import State
+    from ising.typing import RNGKey, TSpin, TSpins
 
 
 

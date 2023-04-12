@@ -1,26 +1,28 @@
 from __future__ import annotations
 
-from typing import Sequence, cast
-import numpy as np
-import jax.numpy as jnp
-from jax import random
+from collections.abc import Sequence
+from typing import cast
+
 import jax
+import jax.numpy as jnp
 import matplotlib as mpl
-import matplotlib.pyplot as plt
-from matplotlib.figure import Figure
 import matplotlib.patches as mpatches
-from scipy.ndimage import generate_binary_structure
+import matplotlib.pyplot as plt
+import numpy as np
+from jax import random
+from matplotlib.figure import Figure
 from scipy import constants
-from ising.typing import TSpins, TSpin, ScalarInt
+from scipy.ndimage import generate_binary_structure
+
 from ising.primitives import (
     TBCModes,
     get_hamiltonian,
     get_magnetisation_density,
-    temperature_to_beta,
-    pvrun_mcmc_steps,
     pvget_equilibrium_energy_and_magnetisation,
+    pvrun_mcmc_steps,
+    temperature_to_beta,
 )
-
+from ising.typing import ScalarInt, TSpin, TSpins
 from ising.utils.types import lists_to_tuples
 
 
@@ -219,11 +221,11 @@ class IsingModelND:
         bc_mode_value: float | None = 0.0,
     ) -> None:
         temperatures = jnp.array(
-            (
+            
                 [temperature_or_temperatures]
                 if isinstance(temperature_or_temperatures, float)
                 else temperature_or_temperatures
-            )
+            
         )
 
         N = temperatures.size
@@ -271,11 +273,11 @@ class IsingModelND:
         bc_mode_value: float | None = 0.0,
     ):
         temperatures = jnp.array(
-            (
+            
                 [temperature_or_temperatures]
                 if isinstance(temperature_or_temperatures, float)
                 else temperature_or_temperatures
-            )
+            
         )
 
         N = temperatures.size

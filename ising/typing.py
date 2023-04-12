@@ -1,8 +1,9 @@
 
+from typing import TypeVar
+
 import numpy as np
 from jax import Array
 from jax.random import PRNGKeyArray
-from typing import TypeVar
 
 T = TypeVar("T")
 

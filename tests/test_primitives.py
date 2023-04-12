@@ -1,7 +1,7 @@
-from pytest import fixture
-from ising.primitives import get_nearest_neighbours
-
 import jax.numpy as jnp
+from pytest import fixture
+
+from ising.primitives import get_nearest_neighbours
 
 
 @fixture

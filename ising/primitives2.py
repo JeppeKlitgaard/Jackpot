@@ -4,19 +4,19 @@ This file contains 'primitives' for the `ising` package.
 Primitives are jittable pure functions.
 """
 from __future__ import annotations
-from jax import Array
-from jax import random
-from jax import jit
-import jax.numpy as jnp
-from ising.typing import TIndex, TShape, TSpin, ScalarFloat, RNGKey
+
 from functools import partial
+from typing import TYPE_CHECKING
+
+import jax.numpy as jnp
+import numpy as np
+from jax import Array, jit, random
 from jax.scipy.signal import convolve
 from scipy import constants
 from scipy.ndimage import generate_binary_structure
-import numpy as np
 
-from typing import TYPE_CHECKING
 from ising.types import BCMode
+from ising.typing import RNGKey, ScalarFloat, TIndex, TShape, TSpin
 
 if TYPE_CHECKING:
     from ising.state import State

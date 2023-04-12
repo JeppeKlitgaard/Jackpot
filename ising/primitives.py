@@ -3,15 +3,13 @@ This file contains 'primitives' for the `ising` package.
 
 Primitives are jittable pure functions.
 """
-from jax import Array
-from jax import lax
-from jax import random
-from jax import jit, pmap, vmap
-from jax.random import KeyArray
-import jax.numpy as jnp
-from ising.typing import TSpins, TSpin, ScalarFloat, RNGKey
-from typing import Any, Literal
 from functools import partial
+from typing import Any, Literal
+
+import jax.numpy as jnp
+import numpy as np
+from jax import Array, jit, lax, pmap, random, vmap
+from jax.random import KeyArray
 from jax.scipy.signal import convolve
 from scipy import constants
 
