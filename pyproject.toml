@@ -33,11 +33,19 @@ pytest = "^7.2.2"
 
 # Poe
 black = "^23.3.0"
+nbqa = "^1.7.0"
 [tool.poe.tasks]
-lint = {cmd = "ruff .", help = "Run ruff"}
+lint = [
+    {cmd = "ruff . "},
+    {cmd = "nbqa ruff ."},
+]
+
 check = {cmd = "mypy", help = "Run mypy"}
 test = {cmd = "pytest", help = "Run pytest"}
-ruff-fix = {cmd = "ruff --fix .", help = "Run ruff with fix"}
+ruff-fix = [
+    {cmd = "ruff --fix ."},
+    {cmd = "nbqa ruff . --fix"},
+]
 
 dev = [
     "lint",
