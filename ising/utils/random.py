@@ -2,7 +2,7 @@ import jax.numpy as jnp
 import numpy as np
 from jax import Array, random
 
-from ising.typing import RNGKey
+from ising.typing import RNGKey, TShape
 
 
 class EasyKey:
@@ -28,7 +28,7 @@ class EasyKey:
         self._key, *ks = random.split(self._key, num=num+1)
         return jnp.asarray(ks)
 
-    def shaped(self, shape: tuple[int, ...]) -> Array:
+    def shaped(self, shape: TShape) -> Array:
         size = np.prod(shape)
         keys = self.news(num=size)
         assert keys.ndim == 2

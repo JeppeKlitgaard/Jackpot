@@ -14,12 +14,13 @@ from typing import Any, Literal
 from functools import partial
 from jax.scipy.signal import convolve
 from scipy import constants
-import numpy as np
+
+from ising.typing import RNGKey, ScalarFloat, TIndex, TShape, TSpin, TSpins
 
 TBCModes = Literal["constant", "periodic"]
 
 
-def get_random_point_idx2(rng_key: RNGKey, shape: tuple[int, ...]) -> tuple[int, ...]:
+def get_random_point_idx2(rng_key: RNGKey, shape: TShape) -> TIndex:
     dim = len(shape)
 
     minvals = np.zeros(dim)
@@ -42,7 +43,7 @@ def temperature_to_beta(temperature_or_temperatures: ScalarFloat) -> ScalarFloat
 
 def get_random_point_idx(
     rng_key: KeyArray, dimensionality: int, size: int
-) -> tuple[int, ...]:
+) -> TIndex:
     return tuple(random.randint(rng_key, (dimensionality,), minval=0, maxval=size))
 
 
@@ -102,7 +103,7 @@ def get_nearest_neighbours(
 )
 def get_hamiltonian_delta(
     state: TSpins,
-    idx: tuple[int, ...],
+    idx: TIndex,
     trial_spin: TSpin,
     interaction_bilinear: float,
     interaction_biquadratic: float,
@@ -265,12 +266,12 @@ def run_mcmc_step(
     # Or if higher but boltzmann says we should
     # Else return old state
     def if_energy_lower(
-        state: TSpins, idx: tuple[int, ...], trial_spin: TSpin
+        state: TSpins, idx: TIndex, trial_spin: TSpin
     ) -> TSpins:
         return state.at[idx].set(trial_spin)
 
     def if_energy_higher(
-        state: TSpins, idx: tuple[int, ...], trial_spin: TSpin
+        state: TSpins, idx: TIndex, trial_spin: TSpin
     ) -> TSpins:
         out: Array = lax.cond(
             jnp.exp(-beta * H_delta) > random.uniform(boltzmann_key),

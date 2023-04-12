@@ -13,7 +13,7 @@ from matplotlib.figure import Figure
 from ising.algorithms import metropolis_hastings_move
 from ising.primitives2 import get_hamiltonian, get_magnetisation_density
 from ising.types import Algorithm, BCMode
-from ising.typing import RNGKey, TFloatParam, TSpin
+from ising.typing import RNGKey, TFloatParam, TShape, TSpin
 
 
 class Environment(eqx.Module):

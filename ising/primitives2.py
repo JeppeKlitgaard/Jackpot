@@ -8,7 +8,7 @@ from jax import Array
 from jax import random
 from jax import jit
 import jax.numpy as jnp
-from ising.typing import TSpin, ScalarFloat, RNGKey
+from ising.typing import TIndex, TShape, TSpin, ScalarFloat, RNGKey
 from functools import partial
 from jax.scipy.signal import convolve
 from scipy import constants
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from ising.state import State
 
 @partial(jit, static_argnames=("shape",))
-def get_random_point_idx(rng_key: RNGKey, shape: tuple[int, ...]) -> tuple[int, ...]:
+def get_random_point_idx(rng_key: RNGKey, shape: TShape) -> TIndex:
     dim = len(shape)
 
     minvals = np.zeros(dim)
