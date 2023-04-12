@@ -196,6 +196,9 @@ class State(EnsamblableModule):
 
         Returns the evolved state.
         """
+        if not steps:
+            return self
+
         keys = random.split(rng_key, num=steps)
 
         evolver = None
@@ -259,7 +262,7 @@ class State(EnsamblableModule):
         )
 
     @eqx.filter_jit
-    def get_measurements(
+    def measure(
         self, *, rng_key: RNGKey, num: int = 1, steps: int = 1
     ) -> Measurements:
         """
@@ -281,6 +284,7 @@ class State(EnsamblableModule):
         )
 
         measurements = Measurements(
+            state_id=self.id_,
             steps=measurement_steps,
             energy=energies,
             magnetisation_density=magnetisation_densities,
