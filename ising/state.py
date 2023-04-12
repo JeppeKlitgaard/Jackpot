@@ -1,6 +1,7 @@
 from typing import Self
 
 import equinox as eqx
+import jax.numpy as jnp
 import matplotlib as mpl
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
@@ -282,9 +283,10 @@ class State(EnsamblableModule):
         measurement_steps, energies, magnetisation_densities = measurer(
             self, keys, steps
         )
+        state_ids = jnp.repeat(jnp.asarray(self.id_), num)
 
         measurements = Measurements(
-            state_id=self.id_,
+            state_id=state_ids,
             steps=measurement_steps,
             energy=energies,
             magnetisation_density=magnetisation_densities,
@@ -333,7 +335,11 @@ class State(EnsamblableModule):
 
         plt.legend(handles=patches, bbox_to_anchor=(1.01, 1), loc=2)
 
-        info_line = f"$S = {self.spins.sum():.1f}$"
+        info_lines = (
+            f"$S = {self.spins.sum():.1f}$",
+            f"$β = {self.env.beta:.3f}$",
+        )
+        info_line = "\n".join(info_lines)
         plt.title(f"Spin states\n{info_line}")
 
         return fig
