@@ -13,11 +13,17 @@ from jax import Array, lax, random
 from jax import ensure_compile_time_eval as compile_time
 from jaxtyping import Bool, Float, UInt
 
-from ising.primitives2 import get_hamiltonian_delta, get_random_point_idx
+from ising.primitives2 import (
+    get_hamiltonian_delta,
+    get_nearest_neighbours,
+    get_random_point_idx,
+    get_spins,
+    set_spin,
+)
 
 if TYPE_CHECKING:
     from ising.state import State
-    from ising.typing import RNGKey, TSpin, TSpins
+    from ising.typing import RNGKey, TSpin
 
     TAcceptFunc = Callable[
         [RNGKey, Float[Array, ""], Float[Array, ""]], Bool[Array, ""]
@@ -72,9 +78,7 @@ def local_update_step(
         return new_spins
 
     new_spin: TSpin = lax.cond(H_delta < 0, if_energy_lower, if_energy_higher)
-    new_spins: TSpins = state.spins.at[tuple(idx)].set(new_spin)
-    where = lambda s: s.spins
-    state = eqx.tree_at(where, state, new_spins)
+    state = set_spin(state=state, idx=idx, new_spin=new_spin)
 
     # Update steps
     where = lambda s: s.steps

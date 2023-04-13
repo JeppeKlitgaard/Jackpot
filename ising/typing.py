@@ -18,3 +18,4 @@ RNGKey = Array | PRNGKeyArray
 
 TShape = tuple[int, ...]
 TIndex = tuple[int, ...]
+TIndexArray = UInt[Array, "a"]

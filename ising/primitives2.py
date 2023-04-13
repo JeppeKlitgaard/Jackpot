@@ -8,18 +8,21 @@ from __future__ import annotations
 from functools import partial
 from typing import TYPE_CHECKING
 
+import equinox as eqx
 import jax.numpy as jnp
 import numpy as np
 from jax import Array, jit, random
 from jax.scipy.signal import convolve
+from jaxtyping import Float, Int, UInt
 from scipy import constants
 from scipy.ndimage import generate_binary_structure
 
 from ising.types import BCMode
-from ising.typing import RNGKey, ScalarFloat, TIndex, TShape, TSpin
+from ising.typing import RNGKey, ScalarFloat, TIndex, TIndexArray, TShape, TSpin
 
 if TYPE_CHECKING:
     from ising.state import State
+
 
 @partial(jit, static_argnames=("shape",))
 def get_random_point_idx(rng_key: RNGKey, shape: TShape) -> TIndex:
@@ -32,44 +35,113 @@ def get_random_point_idx(rng_key: RNGKey, shape: TShape) -> TIndex:
 
     return tuple(idx)
 
+
 def temperature_to_beta(temperature_or_temperatures: ScalarFloat) -> ScalarFloat:
     reciprocal: ScalarFloat = constants.Boltzmann * temperature_or_temperatures
     return 1.0 / reciprocal
+
+
+def apply_boundary_conditions(
+    *, state: State, idxs: Int[Array, "a b"]
+) -> UInt[Array, "a b"]:
+    """
+    Applies boundary conditions to an array of indices.
+
+    Assumes square array.
+
+    This resolves the indices using the boundary condition such that the
+    returned indices are ∈ ℕ ∪ {0}.
+    """
+    bc_mode = state.env.bc_mode
+    oob_idx = state.spins.size  # Guaranteed out-of-bounds
+
+    match bc_mode:
+        case BCMode.CONSTANT:
+            # Set high value to mark out-of-bounds
+            # More readable but requires concrete idxs:
+            # idxs = idxs.at[idxs < 0].set(oob_idx)
+            idxs = jnp.where(idxs < 0, idxs, oob_idx)
+
+        case BCMode.PERIODIC:
+            # Note: We assume square array
+            side_length = state.spins.shape[0]
+            upper_bound = side_length - 1
+
+            # More readable but requires concrete idxs:
+            # idxs = idxs.at[idxs > upper_bound].add(-side_length)
+            idxs = jnp.where(idxs > upper_bound, idxs, idxs - side_length)
+
+    return idxs
+
+
+def get_nearest_neighbour_idxs(
+    *,
+    state: State,
+    idx: TIndexArray,
+) -> UInt[Array, "a b"]:
+    """
+    Retrieves the indices of the nearest neighbours of `idx`.
+    """
+    nn_idxs = []
+    for n in range(state.dim):
+        for delta in [1, -1]:
+            selector = jnp.array(idx)
+            selector = selector.at[n].add(delta)
+            nn_idxs.append(selector)
+
+    nn_idxs_arr = apply_boundary_conditions(state=state, idxs=jnp.asarray(nn_idxs))
+
+    return nn_idxs_arr
+
+
+def get_spins(*, state: State, idxs: UInt[Array, "a b"]) -> Float[Array, a]:
+    """
+    Look up a list of spins by idxs and return them.
+
+    This assumes idxs have already had boundary conditions applied.
+    """
+    bc_mode = state.env.bc_mode
+    bc_mode_value = state.env.bc_mode_value
+
+    spins = []
+    for idx in idxs:
+        # Has potentially out-of-bounds indices after BC applied
+        # These are intended as sentinel-like values
+        if bc_mode == BCMode.CONSTANT:
+            spin = state.spins.at[tuple(idx)].get(mode="fill", fill_value=bc_mode_value)
+
+        # For periodic we assume BC already applied
+        else:
+            spin = state.spins[tuple(idx)]
+
+        spins.append(spin)
+
+    return jnp.asarray(spins)
+
 
 def get_nearest_neighbours(
     *,
     state: State,
     idx: Array,
 ) -> Array:
+    idxs = get_nearest_neighbour_idxs(state=state, idx=idx)
+    neighbours = get_spins(state=state, idxs=idxs)
+
+    return neighbours
+
+
+def set_spin(*, state: State, idx: TIndexArray, new_spin: TSpin) -> State:
     """
-    Boundary condition: OOB are set to 0.
+    Convenience function for updating a spin on a state.
     """
-    bc_mode = state.env.bc_mode
-    bc_mode_value = state.env.bc_mode_value
+    # Construct new spins array
+    spins = state.spins.at[tuple(idx)].set(new_spin)
 
-    nearest_neighbours = []
-    for n in range(state.dim):
-        for delta in [1, -1]:
-            selector = jnp.array(idx)
-            selector = selector.at[n].add(delta)
+    # Update in State PyTree
+    where = lambda s: s.spins
+    state = eqx.tree_at(where, state, spins)
 
-            # Padding with zeros
-            if bc_mode == BCMode.CONSTANT:
-                assert bc_mode_value is not None
-
-                selector = jnp.where(selector == -1, selector.size + 1, selector)
-                neighbour = state.spins.at[tuple(selector)].get(
-                    mode="fill", fill_value=bc_mode_value
-                )
-
-            elif bc_mode == BCMode.PERIODIC:
-                selector = jnp.where(selector == selector.size + 1, 0, selector)
-                neighbour = state.spins.at[tuple(selector)].get()
-
-            nearest_neighbours.append(neighbour)
-
-    nn = jnp.asarray(nearest_neighbours)
-    return nn
+    return state
 
 
 def get_hamiltonian_delta(
@@ -127,9 +199,7 @@ def get_hamiltonian_delta(
     return H
 
 
-def get_hamiltonian(
-    state: State
-) -> ScalarFloat:
+def get_hamiltonian(state: State) -> ScalarFloat:
     # Find a kernel we can use with convolution
     kernel = generate_binary_structure(state.dim, 1)
     np.put(kernel, kernel.size // 2, False)
@@ -138,7 +208,6 @@ def get_hamiltonian(
     env = state.env
     spins = state.spins
     spins_sq = jnp.square(spins)
-
 
     # J - Calculate bilinear exchange energy (nearest neighbour)
     H -= env.interaction_bilinear * (spins * convolve(spins, kernel, mode="same")).sum()
