@@ -60,7 +60,7 @@ def apply_boundary_conditions(
             # Set high value to mark out-of-bounds
             # More readable but requires concrete idxs:
             # idxs = idxs.at[idxs < 0].set(oob_idx)
-            idxs = jnp.where(idxs < 0, idxs, oob_idx)
+            idxs = jnp.where(idxs >= 0, idxs, oob_idx)
 
         case BCMode.PERIODIC:
             # Note: We assume square array
@@ -69,7 +69,7 @@ def apply_boundary_conditions(
 
             # More readable but requires concrete idxs:
             # idxs = idxs.at[idxs > upper_bound].add(-side_length)
-            idxs = jnp.where(idxs > upper_bound, idxs, idxs - side_length)
+            idxs = jnp.where(idxs <= upper_bound, idxs, idxs - side_length)
 
     return idxs
 
