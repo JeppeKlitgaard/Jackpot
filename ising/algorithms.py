@@ -18,6 +18,7 @@ from ising.primitives2 import (
     get_nearest_neighbours,
     get_random_point_idx,
     get_spins,
+    get_trial_spin,
     set_spin,
 )
 
@@ -62,8 +63,9 @@ def local_update_step(
     spin_key, accept_key = random.split(rng_key, 2)
 
     current_spin = state.spins[tuple(idx)]
-    trial_spin = random.choice(key=spin_key, a=np.asarray(state.env.spin_states))
-
+    trial_spin = get_trial_spin(
+        rng_key=spin_key, state=state, current_spin=current_spin
+    )
     H_delta = get_hamiltonian_delta(state=state, idx=idx, trial_spin=trial_spin)
 
     accept = accept_func(accept_key, state.env.beta, H_delta)

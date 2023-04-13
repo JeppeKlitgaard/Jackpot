@@ -5,18 +5,17 @@ Primitives are jittable pure functions.
 """
 from __future__ import annotations
 
-from functools import partial
 from typing import TYPE_CHECKING
 
 import equinox as eqx
 import jax.numpy as jnp
 import numpy as np
-from jax import Array, random
+from jax import Array, lax, random
+from jax import ensure_compile_time_eval as compile_time
 from jax.scipy.signal import convolve
 from jaxtyping import Float, Int, UInt
 from scipy import constants
 from scipy.ndimage import generate_binary_structure
-from jax import ensure_compile_time_eval as compile_time
 
 from ising.types import BCMode
 from ising.typing import RNGKey, ScalarFloat, TIndex, TIndexArray, TShape, TSpin
@@ -35,6 +34,24 @@ def get_random_point_idx(rng_key: RNGKey, shape: TShape) -> TIndex:
     idx = random.randint(key=rng_key, shape=(dim,), minval=minvals, maxval=maxvals)
 
     return tuple(idx)
+
+
+def get_trial_spin(*, rng_key:RNGKey, state: State, current_spin: float) -> TSpin:
+    with compile_time():
+        spin_states = state.env.spin_states
+        spin_states_arr = np.asarray(spin_states)
+        current_spin_idx = jnp.argmax(spin_states_arr == current_spin)
+
+        # In order to construct branch of different candidates as a function
+        # of current spin we need to use lax.switch statement
+        # We an array holding all other possible spins than the current spin
+        # We make such an array for each possible current spin
+        branches = [
+            lambda: np.delete(spin_states, i) for i in range(len(spin_states))
+        ]
+        candidates = lax.switch(current_spin_idx, branches)
+
+    return random.choice(key=rng_key, a=candidates)
 
 
 def temperature_to_beta(temperature_or_temperatures: ScalarFloat) -> ScalarFloat:
