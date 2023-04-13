@@ -8,10 +8,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 from jax import Array, lax, random
 from jax.random import KeyArray
-from jaxtyping import Float, Int
+from jaxtyping import Float
 from matplotlib.figure import Figure
 
-from ising.algorithms import metropolis_hastings_move
+from ising.algorithms import metropolis_hastings_step, metropolis_hastings_sweep
 from ising.module import EnsamblableModule
 from ising.primitives2 import get_hamiltonian, get_magnetisation_density
 from ising.types import Algorithm, BCMode
@@ -69,13 +69,13 @@ class Environment(EnsamblableModule):
         cls,
         spin: TSpin,
         *,
-        beta: TFloatParam,
-        interaction_bilinear: TFloatParam,
-        interaction_biquadratic: TFloatParam,
-        interaction_anisotropy: TFloatParam,
-        interaction_bicubic: TFloatParam,
-        interaction_external_field: TFloatParam,
-        nuclear_magnetic_moment: TFloatParam,
+        beta: float,
+        interaction_bilinear: float,
+        interaction_biquadratic: float,
+        interaction_anisotropy: float,
+        interaction_bicubic: float,
+        interaction_external_field: float,
+        nuclear_magnetic_moment: float,
         algorithm: Algorithm,
         bc_mode: BCMode,
         bc_mode_value: TSpin | None = None,

@@ -93,6 +93,7 @@ select = [
 ignore = [
     "E731",
     "F821",
+    "F722",
 ]
 
 [build-system]
