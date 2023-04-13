@@ -11,11 +11,12 @@ from typing import TYPE_CHECKING
 import equinox as eqx
 import jax.numpy as jnp
 import numpy as np
-from jax import Array, jit, random
+from jax import Array, random
 from jax.scipy.signal import convolve
 from jaxtyping import Float, Int, UInt
 from scipy import constants
 from scipy.ndimage import generate_binary_structure
+from jax import ensure_compile_time_eval as compile_time
 
 from ising.types import BCMode
 from ising.typing import RNGKey, ScalarFloat, TIndex, TIndexArray, TShape, TSpin
@@ -24,12 +25,12 @@ if TYPE_CHECKING:
     from ising.state import State
 
 
-@partial(jit, static_argnames=("shape",))
 def get_random_point_idx(rng_key: RNGKey, shape: TShape) -> TIndex:
-    dim = len(shape)
+    with compile_time():
+        dim = len(shape)
 
-    minvals = np.zeros(dim)
-    maxvals = np.asarray(shape)
+        minvals = np.zeros(dim)
+        maxvals = np.asarray(shape)
 
     idx = random.randint(key=rng_key, shape=(dim,), minval=minvals, maxval=maxvals)
 
