@@ -35,6 +35,16 @@ def metropolis_hastings_accept(
     return acceptance
 
 
+@eqx.filter_jit
+def glauber_accept(
+    rng_key: RNGKey, beta: Float[Array, ""], delta: Float[Array, ""]
+) -> Bool[Array, ""]:
+    x = random.uniform(rng_key)
+    threshold = 1.0 / (1.0 + jnp.exp(beta * delta))
+    acceptance = threshold > x
+
+    return acceptance
+
 
 @eqx.filter_jit
 def local_update_step(
@@ -114,6 +124,28 @@ def metropolis_hastings_step(rng_key: RNGKey, state: State) -> State:
 def metropolis_hastings_sweep(rng_key: RNGKey, state: State) -> State:
     return local_update_sweep(
         accept_func=metropolis_hastings_accept,
+        rng_key=rng_key,
+        state=state,
+    )
+
+
+@eqx.filter_jit
+def glauber_step(rng_key: RNGKey, state: State) -> State:
+    point_key, update_key = random.split(rng_key, 2)
+    idx = get_random_point_idx(rng_key=point_key, shape=state.shape)
+
+    return local_update_step(
+        accept_func=glauber_accept,
+        idx=idx,
+        rng_key=update_key,
+        state=state,
+    )
+
+
+@eqx.filter_jit
+def glauber_sweep(rng_key: RNGKey, state: State) -> State:
+    return local_update_sweep(
+        accept_func=glauber_accept,
         rng_key=rng_key,
         state=state,
     )

@@ -11,7 +11,7 @@ from jax.random import KeyArray
 from jaxtyping import Float
 from matplotlib.figure import Figure
 
-from ising.algorithms import metropolis_hastings_step, metropolis_hastings_sweep
+from ising.algorithms import glauber_step, glauber_sweep, metropolis_hastings_step, metropolis_hastings_sweep
 from ising.module import EnsamblableModule
 from ising.primitives2 import get_hamiltonian, get_magnetisation_density
 from ising.types import Algorithm, BCMode
@@ -222,6 +222,9 @@ class State(EnsamblableModule):
             case Algorithm.METROPOLIS_HASTINGS:
                 evolver = metropolis_hastings_step
 
+            case Algorithm.GLAUBER:
+                evolver = glauber_step
+
             case Algorithm.WOLFF:
                 raise ValueError(
                     "Wolff is a cluster algorithm and can only do full sweeps. "
@@ -264,6 +267,9 @@ class State(EnsamblableModule):
         match self.env.algorithm:
             case Algorithm.METROPOLIS_HASTINGS:
                 evolver = metropolis_hastings_sweep
+
+            case Algorithm.GLAUBER:
+                evolver = glauber_sweep
 
             case Algorithm.WOLFF:
                 raise ValueError(
