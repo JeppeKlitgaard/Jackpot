@@ -117,6 +117,10 @@ class Measurements(EnsamblableModule):
     def vectorisation_shape(self) -> TShape:
         return self.energy.shape[:-1]
 
+    @property
+    def sweeps(self) -> float:
+        return self.steps / np.prod(self.spins_shape)
+
 
 class State(EnsamblableModule):
     """
@@ -133,11 +137,15 @@ class State(EnsamblableModule):
 
     @property
     def shape(self) -> TShape:
-        return self.spins.shape[-self.dim:]
+        return self.spins.shape[-self.dim :]
 
     @property
     def vectorisation_shape(self) -> TShape:
-        return self.spins.shape[:-self.dim]
+        return self.spins.shape[: -self.dim]
+
+    @property
+    def sweeps(self) -> float:
+        return self.steps / self.spins.size
 
     @classmethod
     @eqx.filter_jit
@@ -197,7 +205,7 @@ class State(EnsamblableModule):
         return cls(spins=spins, dim=spins.ndim, env=env, id_=id_)
 
     @eqx.filter_jit
-    def evolve(self, steps: int, rng_key: RNGKey) -> Self:
+    def evolve_steps(self, steps: int, rng_key: RNGKey) -> Self:
         """
         Evolves the state for `steps` steps using the algorithm given in
         `state.env`.
@@ -212,13 +220,20 @@ class State(EnsamblableModule):
         evolver = None
         match self.env.algorithm:
             case Algorithm.METROPOLIS_HASTINGS:
-                evolver = metropolis_hastings_move
+                evolver = metropolis_hastings_step
 
             case Algorithm.WOLFF:
-                evolver = None
+                raise ValueError(
+                    "Wolff is a cluster algorithm and can only do full sweeps. "
+                    "Use `evolve_sweeps`"
+                )
 
             case Algorithm.SWENDSEN_WANG:
-                evolver = None
+                raise ValueError(
+                    "Swendsen-Wang is a cluster algorithm and can only do "
+                    "full sweeps. "
+                    "Use `evolve_sweeps`"
+                )
 
         # For loop that carries out individual steps
         def body_fun(i: int, state: State) -> State:
@@ -230,9 +245,48 @@ class State(EnsamblableModule):
 
         self = lax.fori_loop(0, steps, body_fun, self)
 
-        # Update number of steps
-        where = lambda _: _.steps
-        self = eqx.tree_at(where, self, self.steps + steps)
+        return self
+
+    @eqx.filter_jit
+    def evolve_sweeps(self, sweeps: int, rng_key: RNGKey) -> Self:
+        """
+        Evolves the state for `sweeps` sweeps using the algorithm given in
+        `state.env`.
+
+        Returns the evolved state.
+        """
+        if not sweeps:
+            return self
+
+        keys = random.split(rng_key, num=sweeps)
+
+        evolver = None
+        match self.env.algorithm:
+            case Algorithm.METROPOLIS_HASTINGS:
+                evolver = metropolis_hastings_sweep
+
+            case Algorithm.WOLFF:
+                raise ValueError(
+                    "Wolff is a cluster algorithm and can only do full sweeps. "
+                    "Use `evolve_sweeps`"
+                )
+
+            case Algorithm.SWENDSEN_WANG:
+                raise ValueError(
+                    "Swendsen-Wang is a cluster algorithm and can only do "
+                    "full sweeps. "
+                    "Use `evolve_sweeps`"
+                )
+
+        # For loop that carries out individual steps
+        def body_fun(i: int, state: State) -> State:
+            out: State = evolver(
+                keys[i],
+                state,
+            )
+            return out
+
+        self = lax.fori_loop(0, sweeps, body_fun, self)
 
         return self
 
@@ -253,31 +307,31 @@ class State(EnsamblableModule):
     @staticmethod
     @eqx.filter_jit
     def _get_single_measurements(
-        state: Self, rng_key: RNGKey, steps: int = 1
+        state: Self, rng_key: RNGKey, sweeps: int = 1
     ) -> tuple[Array, Array, Array]:
         """
         Transformable function that returns a single set of physical
         measurements on the system.
         """
-        new_state = state.evolve(steps=steps, rng_key=rng_key)
-        energy = new_state.calculate_energy()
-        magnetisation_density = new_state.calculate_magnetisation_density()
+        state = state.evolve_sweeps(sweeps=sweeps, rng_key=rng_key)
+        energy = state.calculate_energy()
+        magnetisation_density = state.calculate_magnetisation_density()
 
         return (
-            new_state.steps,
+            state.steps,
             energy,
             magnetisation_density,
         )
 
     @eqx.filter_jit
     def measure(
-        self, *, rng_key: RNGKey, num: int = 1, steps: int = 1
+        self, *, rng_key: RNGKey, num: int = 1, sweeps: int = 1
     ) -> Measurements:
         """
         Returns a series of physical measurements taken on the system.
 
         `num` independent measurements are taken of the system after it has
-        been evolved for `steps` evolution steps.
+        been evolved for `sweeps` evolution sweeps.
 
         The states used to derived the measurements are evolved independently
         from the same initial state.
@@ -288,13 +342,14 @@ class State(EnsamblableModule):
             self._get_single_measurements
         )
         measurement_steps, energies, magnetisation_densities = measurer(
-            self, keys, steps
+            self, keys, sweeps
         )
         state_ids = jnp.repeat(jnp.asarray(self.id_), num)
 
         measurements = Measurements(
             state_id=state_ids,
             steps=measurement_steps,
+            spins_shape=self.spins.shape,
             energy=energies,
             magnetisation_density=magnetisation_densities,
         )
