@@ -39,7 +39,6 @@ def get_random_point_idx(rng_key: RNGKey, shape: TShape) -> TIndex:
 def get_trial_spin(*, rng_key: RNGKey, state: State, current_spin: float) -> TSpin:
     with compile_time():
         spin_states = state.env.spin_states
-        print(spin_states)
         spin_states_arr = np.asarray(spin_states)
 
         current_spin_idx = jnp.where(
