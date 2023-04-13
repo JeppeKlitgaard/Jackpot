@@ -107,7 +107,6 @@ def apply_boundary_conditions(
 
 
 def get_nearest_neighbour_idxs(
-    *,
     state: State,
     idx: TIndexArray,
 ) -> UInt[Array, "a b"]:
