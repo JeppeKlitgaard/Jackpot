@@ -9,6 +9,7 @@ import equinox as eqx
 import jax.numpy as jnp
 import numpy as np
 from jax import Array, lax, random
+from jaxtyping import Bool, Float, UInt
 
 from ising.primitives2 import get_hamiltonian_delta, get_random_point_idx
 
@@ -44,6 +45,7 @@ def metropolis_hastings_move(rng_key: RNGKey, state: State) -> State:
     new_state: State = eqx.tree_at(where, state, new_spins)
 
     return new_state
+
 
 @eqx.filter_jit
 def metropolis_hastings_moves(

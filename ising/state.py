@@ -15,7 +15,13 @@ from ising.algorithms import metropolis_hastings_move
 from ising.module import EnsamblableModule
 from ising.primitives2 import get_hamiltonian, get_magnetisation_density
 from ising.types import Algorithm, BCMode
-from ising.typing import RNGKey, TFloatParam, TShape, TSpin
+from ising.typing import (
+    RNGKey,
+    ScalarInt,
+    TShape,
+    TSpin,
+    TSpins,
+)
 
 
 class Environment(EnsamblableModule):
@@ -26,27 +32,27 @@ class Environment(EnsamblableModule):
     """
 
     # Possible spin states
-    spin_states: tuple[TSpin, ...] = eqx.static_field()
+    spin_states: tuple[float, ...] = eqx.static_field()
 
     # Coldness
     beta: Float[Array, "dim"]
 
     # Interaction parameters
-    interaction_bilinear: TFloatParam = eqx.static_field()
-    interaction_biquadratic: TFloatParam = eqx.static_field()
-    interaction_anisotropy: TFloatParam = eqx.static_field()
-    interaction_bicubic: TFloatParam = eqx.static_field()
-    interaction_external_field: TFloatParam = eqx.static_field()
+    interaction_bilinear: float = eqx.static_field()
+    interaction_biquadratic: float = eqx.static_field()
+    interaction_anisotropy: float = eqx.static_field()
+    interaction_bicubic: float = eqx.static_field()
+    interaction_external_field: float = eqx.static_field()
 
     # Nuclear magnetic moment
-    nuclear_magnetic_moment: TFloatParam = eqx.static_field()
+    nuclear_magnetic_moment: float = eqx.static_field()
 
     # Method
     algorithm: Algorithm = eqx.static_field()
 
     # Boundary conditions
     bc_mode: BCMode = eqx.static_field()
-    bc_mode_value: TSpin | None = eqx.static_field()
+    bc_mode_value: float | None = eqx.static_field()
 
     def __post_init__(
         self,
@@ -100,8 +106,9 @@ class Measurements(EnsamblableModule):
     step for the state with the given id.
     """
 
-    steps: Int[Array, "1"]
-    state_id: Int[Array, "1"]
+    steps: ScalarInt
+    state_id: ScalarInt
+    spins_shape: TShape
 
     energy: Float[Array, "a"]
     magnetisation_density: Float[Array, "a"]
@@ -116,13 +123,13 @@ class State(EnsamblableModule):
     Represents an (immutable) state of the system.
     """
 
-    spins: Float[Array, "*dims"]
-    dim: Int[Array, "1"] = eqx.static_field()
+    spins: TSpins
+    dim: int = eqx.static_field()
 
     env: Environment
 
-    id_: Int[Array, "1"]
-    steps: Int[Array, "1"] = 0
+    id_: int
+    steps: int = 0
 
     @property
     def shape(self) -> TShape:

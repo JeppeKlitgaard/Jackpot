@@ -1,21 +1,18 @@
 
 from typing import TypeVar
 
-import numpy as np
 from jax import Array
 from jax.random import PRNGKeyArray
+from jaxtyping import Float, Int, UInt
 
 T = TypeVar("T")
 
-Float = np.float64
-Integer = int
+ScalarFloat = Float[Array, ""]
+ScalarInt = Int[Array, ""]
+ScalarUInt = UInt[Array, ""]
 
-ScalarFloat = Float | float | Array
-ScalarInt = Integer | Array
-
-TSpin = Float
-TSpins = Array
-TFloatParam = np.float64
+TSpin = Float[Array, ""]
+TSpins = Float[Array, "..."]
 
 RNGKey = Array | PRNGKeyArray
 
