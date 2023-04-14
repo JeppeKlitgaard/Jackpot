@@ -604,17 +604,3 @@ def wolff_sweep(rng_key: RNGKey, state: State) -> State:
     state = lax.cond(accept, lambda: trial_state, lambda: state)
 
     return state
-
-
-#     @eqx.filter_jit
-# def metropolis_hastings_accept(
-#     rng_key: RNGKey, beta: Float[Array, ""], delta: Float[Array, ""]
-# ) -> Bool[Array, ""]:
-#     x = random.uniform(rng_key)
-#     threshold = jnp.exp(-beta * delta)
-#     acceptance = threshold > x
-
-#     return acceptance
-
-
-#     return state

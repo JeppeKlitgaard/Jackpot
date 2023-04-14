@@ -1,7 +1,7 @@
 import jax.numpy as jnp
 from pytest import fixture
 
-from ising.primitives import get_nearest_neighbours
+from ising.primitives.local import get_nearest_neighbours
 
 
 @fixture
@@ -18,8 +18,8 @@ def test_get_nearest_neighbours_constant(state):
         jnp.array([4, 0, 2, 0]),
     )
 
-def test_get_nearest_neighbours_periodic(state):
 
+def test_get_nearest_neighbours_periodic(state):
     assert jnp.array_equal(
         get_nearest_neighbours(state, (0, 0), bc_mode="periodic"),
         jnp.array([4, 7, 2, 3]),
