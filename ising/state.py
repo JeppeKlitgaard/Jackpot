@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Self
+from typing import Self
 
 import equinox as eqx
 import jax.numpy as jnp
@@ -13,6 +13,7 @@ from jax.random import KeyArray
 from jaxtyping import Float
 from matplotlib.figure import Figure
 
+from ising.algorithms.cluster import wolff_sweep
 from ising.algorithms.local import (
     glauber_step,
     glauber_sweep,
@@ -25,6 +26,7 @@ from ising.types import Algorithm, BCMode
 from ising.typing import (
     RNGKey,
     ScalarInt,
+    TEvolveAlgorithm,
     TShape,
     TSpin,
     TSpins,
@@ -224,7 +226,7 @@ class State(EnsamblableModule):
 
         keys = random.split(rng_key, num=steps)
 
-        evolver: Any = None
+        evolver: TEvolveAlgorithm
         match self.env.algorithm:
             case Algorithm.METROPOLIS_HASTINGS:
                 evolver = metropolis_hastings_step
@@ -270,7 +272,7 @@ class State(EnsamblableModule):
 
         keys = random.split(rng_key, num=sweeps)
 
-        evolver: Any = None
+        evolver: TEvolveAlgorithm
         match self.env.algorithm:
             case Algorithm.METROPOLIS_HASTINGS:
                 evolver = metropolis_hastings_sweep

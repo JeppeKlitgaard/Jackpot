@@ -1,9 +1,13 @@
-from typing import Self
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Self
 
 import equinox as eqx
 
-from ising.typing import TShape
 from ising.utils.tree import unensamble
+
+if TYPE_CHECKING:
+    from ising.typing import TShape
 
 
 class EnsamblableModule(eqx.Module):

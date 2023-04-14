@@ -7,10 +7,9 @@ from jax import Array
 from jaxtyping import Float
 from scipy import constants
 
-from ising.typing import TIndexArray, TSpin
-
 if TYPE_CHECKING:
     from ising.state import State
+    from ising.typing import TIndexArray, TSpin
 
 
 def set_spin(*, state: State, idx: TIndexArray, new_spin: TSpin) -> State:

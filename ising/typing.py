@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from typing import TypeVar
 
 from jax import Array
@@ -18,3 +19,5 @@ RNGKey = Array | PRNGKeyArray
 TShape = tuple[int, ...]
 TIndex = tuple[int, ...]
 TIndexArray = UInt[Array, "a"]
+
+TEvolveAlgorithm = Callable[[RNGKey, "State"], "State"]

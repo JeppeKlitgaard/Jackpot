@@ -9,10 +9,10 @@ from jax.scipy.signal import convolve
 from scipy.ndimage import generate_binary_structure
 
 from ising.primitives.local import get_nearest_neighbours
-from ising.typing import ScalarFloat, TSpin
 
 if TYPE_CHECKING:
     from ising.state import State
+    from ising.typing import ScalarFloat, TSpin
 
 
 def get_magnetisation_density(state: State) -> ScalarFloat:

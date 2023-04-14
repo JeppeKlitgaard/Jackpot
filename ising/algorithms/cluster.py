@@ -1,12 +1,16 @@
 from __future__ import annotations
 
-from typing import Self
+from typing import TYPE_CHECKING, Self
 
 import equinox as eqx
 import jax.numpy as jnp
 import numpy as np
 from jax import Array, lax, random
 from jaxtyping import Bool, Int, UInt
+
+if TYPE_CHECKING:
+    from ising.state import State
+    from ising.typing import RNGKey
 
 
 class ClusterSolution(eqx.Module):

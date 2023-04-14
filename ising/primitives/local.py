@@ -9,10 +9,10 @@ from jax import ensure_compile_time_eval as compile_time
 from jaxtyping import Float, Int, UInt
 
 from ising.types import BCMode
-from ising.typing import RNGKey, TIndex, TIndexArray, TShape
 
 if TYPE_CHECKING:
     from ising.state import State
+    from ising.typing import RNGKey, TIndex, TIndexArray, TShape
 
 
 def get_random_point_idx(rng_key: RNGKey, shape: TShape) -> TIndex:
