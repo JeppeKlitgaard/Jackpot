@@ -18,7 +18,7 @@ from ising.algorithms import (
     metropolis_hastings_sweep,
 )
 from ising.module import EnsamblableModule
-from ising.primitives2 import get_hamiltonian, get_magnetisation_density
+from ising.primitives.measure import get_hamiltonian, get_magnetisation_density
 from ising.types import Algorithm, BCMode
 from ising.typing import (
     RNGKey,
