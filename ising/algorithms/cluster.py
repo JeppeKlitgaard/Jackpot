@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Self
 
 import equinox as eqx
 import jax.numpy as jnp
-import numpy as np
 from jax import Array, lax, random
 from jaxtyping import Bool, Int, UInt
 
@@ -42,9 +41,9 @@ class ClusterSolution(eqx.Module):
 
         # Construct an array where the first axis holds the different layers
         # Each layer corresponds to neighbours along a particular axis
-        neighbours = np.empty((spins.ndim, *shape), dtype=spins.dtype)
+        neighbours = jnp.empty((spins.ndim, *shape), dtype=spins.dtype)
         for i in range(spins.ndim):
-            neighbours[i] = jnp.roll(spins, shift=-1, axis=i)
+            neighbours = neighbours.at[i].set(jnp.roll(spins, shift=-1, axis=i))
 
         # Compute a link factor for each neighbour site
         link_factors = get_cluster_linkage_factors(
@@ -103,7 +102,7 @@ class ClusterSelection(eqx.Module):
 
     @classmethod
     def new(
-        cls, selected: Bool[Array, *dims], cluster_solution: ClusterSolution
+        cls, selected: Bool[Array, "*dims"], cluster_solution: ClusterSolution
     ) -> Self:
         return cls(
             selected=selected,
