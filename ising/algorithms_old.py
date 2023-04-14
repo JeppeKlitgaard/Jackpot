@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from collections import deque
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING
 
 import equinox as eqx
 import jax.numpy as jnp
@@ -13,21 +13,19 @@ import numpy as np
 from einops import rearrange
 from jax import Array, lax, random
 from jax import ensure_compile_time_eval as compile_time
-from jaxtyping import Bool, Float, Int, UInt
+from jaxtyping import Bool, Float
 
 from ising.primitives.local import get_random_point_idx
-from ising.primitives.measure import get_hamiltonian_delta
 from ising.primitives.state import get_trial_spin
 from ising.primitives.utils import set_spin
 
 if TYPE_CHECKING:
     from ising.state import State
-    from ising.typing import RNGKey, TSpin
+    from ising.typing import RNGKey
 
     TAcceptFunc = Callable[
         [RNGKey, Float[Array, ""], Float[Array, ""]], Bool[Array, ""]
     ]
-
 
 
 # @eqx.filter_jit
@@ -158,183 +156,6 @@ def wolff_sweep(rng_key: RNGKey, state: State) -> State:
     state = lax.cond(accept, lambda: trial_state, lambda: state)
 
     return state
-
-
-class ClusterSelection(eqx.Module):
-    selected: Bool[Array, "*dims"]
-    cluster_solution: ClusterSolution
-    is_done: bool
-    steps: int
-    """
-    Marks a single selected cluster.
-
-    This is done by iteratively following and marking sites from an initial
-    seed site via the links obtained in the cluster solution.
-
-    Together `cluster_solution.links` and `selected` make up a graph of spin
-    sites and interconnecting links.
-
-    This process is fundamentally unparallelisable and cannot be vectorised
-    further than what is done below (after for loop is unrolled at compile time).
-
-    Attributes:
-        selected: Array of bools masking which spin sites are part of this
-            specific cluster.
-        cluster_solution: A solution from the clustering routine.
-            This object holds the probabilistically determined links
-        is_done: boolean flag demarking whether cluster selection has terminated
-        steps: number of steps it has taken to find cluster from seed index
-        """
-
-    @classmethod
-    def new(
-        cls, selected: Bool[Array, *dims], cluster_solution: ClusterSolution
-    ) -> Self:
-        return cls(
-            selected=selected,
-            cluster_solution=cluster_solution,
-            is_done=False,
-            steps=0,
-        )
-
-    @classmethod
-    def from_seed_idx(
-        cls, cluster_solution: ClusterSolution, seed_idx: UInt[Array, a]
-    ) -> Self:
-        """
-        Find a full selection from a single seed site.
-
-        Uses a un-unrollable while-loop underneath.
-        """
-        spins_shape = cluster_solution.links.shape[1:]
-        selected = jnp.zeros(shape=spins_shape, dtype=bool)
-        selected = selected.at[tuple(seed_idx)].set(True)
-
-        selector = cls.new(selected=selected, cluster_solution=cluster_solution)
-        selector = lax.while_loop(
-            selector.should_continue, selector.expand_selection_step, selector
-        )
-
-        return selector
-
-    @staticmethod
-    def should_continue(cluster_selector: ClusterSelection) -> bool:
-        """
-        Used as part of the LAX `while_loop` to determine whether to exit loop.
-        """
-        return cluster_selector.is_done == False  # noqa: E712
-
-    @staticmethod
-    def expand_selection_step(cluster_selector: ClusterSelection) -> ClusterSelection:
-        """
-        A single step that expands our cluster selection by following the
-        edges in our spin-link graph.
-        """
-        selector = cluster_selector
-        solution = cluster_selector.cluster_solution
-        # Holds all selected sites this round
-        selected = selector.selected
-
-        # This can be possibly be done with broadcasting,
-        # but since we JIT anyway we prefer a more readable version.
-        # Since selection shape is known at compile time this loop gets
-        # unrolled trivially by XLA.
-        for i in range(selector.selected.ndim):
-            # i denotes the 'layer', where each layer corresponds to
-            # links along a particular axis.
-            # In 3D: [0] is the up-down axis, [1] is left-right, [2] is in-out
-            # Below we use up/down notation for all axis though
-
-            # All links connected to selected sites
-            links_to_try = selector.selected | jnp.roll(selector.selected, -1, i)
-
-            # Filter: only the links we have activated
-            links_selected = links_to_try & solution.links[i]
-
-            # Expand selected links since links are bidirectional
-            links_selected = links_selected | jnp.roll(links_selected, 1, i)
-
-            # Add newly selected sites
-            selected = selected | links_selected
-
-        # The sites that changed since last iteration
-        new_sites = selected ^ selector.selected
-        is_done = new_sites.sum() == 0
-
-        return ClusterSelection(
-            selected=selected,
-            cluster_solution=solution,
-            is_done=is_done,
-            steps=selector.steps + 1,
-        )
-
-
-
-class ClusterSolverState(eqx.Module):
-    """
-    A previous attempt at an iterative cluster grower.
-
-    There are a few bugs left, but the main principle is working.
-    Since this does selection and clustering in the same loop, this
-    algorithm is inefficient for evolvers that flip more than a single
-    cluster (Swendsen-Wang), but work decently for single-cluster methods
-    (Wolff).
-
-    It uses a convolution behind the scenes to expand the selected cluster.
-    """
-
-    do_not_visit: Bool[Array, ...]
-    updated: Bool[Array, ...]
-
-    neighbour_kernel: Int[Array, ...]
-
-    rng_key: RNGKey
-    threshold: float
-
-    steps: int
-    is_done: bool
-
-    @staticmethod
-    def should_continue(cluster_state: Self) -> bool:
-        return cluster_state.is_done == False  # noqa: E712
-
-    @staticmethod
-    def evolve(cluster_state: Self) -> Self:
-        cs = cluster_state
-        new_key, randoms_key = random.split(cluster_state.rng_key)
-
-        # Find neighbours
-        neighbour_finder = cs.updated.astype(int)
-        neighbour_finder = convolve_with_wrapping(neighbour_finder, cs.neighbour_kernel)
-        neighbours = jnp.clip(neighbour_finder, 0, 2).astype(bool)
-
-        # Find candidates
-        candidates = neighbours & ~cs.do_not_visit & ~cs.updated
-
-        # Generate random numbers for probabilistic addition to cluster
-        randoms = random.uniform(key=randoms_key, shape=candidates.shape)
-        random_accept = cs.threshold > randoms
-
-        # Find new cluster members
-        new_cluster_members = candidates & random_accept
-
-        # Reflect updates on other arrays
-        updated = cs.updated | new_cluster_members
-
-        # We have visited all states this time around, thus
-        # no unvisited states if we didn't add new members
-        # in which case we are done
-        is_done = new_cluster_members.sum() == 0
-
-        return ClusterSolverState(
-            do_not_visit=cs.do_not_visit,
-            updated=updated,
-            neighbour_kernel=cs.neighbour_kernel,
-            rng_key=new_key,
-            threshold=cs.threshold,
-            steps=cs.steps + new_cluster_members.sum(),
-            is_done=is_done,
-        )
 
 
 # @eqx.filter_jit
