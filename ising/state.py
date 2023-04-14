@@ -281,10 +281,7 @@ class State(EnsamblableModule):
                 evolver = glauber_sweep
 
             case Algorithm.WOLFF:
-                raise ValueError(
-                    "Wolff is a cluster algorithm and can only do full sweeps. "
-                    "Use `evolve_sweeps`"
-                )
+                evolver = wolff_sweep
 
             case Algorithm.SWENDSEN_WANG:
                 raise ValueError(

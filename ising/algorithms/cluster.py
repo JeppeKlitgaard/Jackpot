@@ -7,6 +7,14 @@ import jax.numpy as jnp
 from jax import Array, lax, random
 from jaxtyping import Bool, Int, UInt
 
+from ising.algorithms.local import metropolis_hastings_accept
+from ising.debug import dbg
+from ising.primitives.cluster import get_cluster_linkage_factors
+from ising.primitives.local import get_random_point_idx
+from ising.primitives.measure import get_hamiltonian
+from ising.primitives.state import get_trial_spin
+from ising.utils.graph import show
+
 if TYPE_CHECKING:
     from ising.state import State
     from ising.typing import RNGKey
@@ -181,6 +189,41 @@ class ClusterSelection(eqx.Module):
             is_done=is_done,
             steps=selector.steps + 1,
         )
+
+
+@eqx.filter_jit
+def wolff_sweep(rng_key: RNGKey, state: State) -> State:
+    print("Recompiled")
+    point_key, spin_key, accept_key = random.split(key=rng_key, num=3)
+    # First step is solving for the clusters
+    solution = ClusterSolution.clusterise_state(rng_key=rng_key, state=state)
+
+    seed_idx = get_random_point_idx(rng_key=point_key, shape=state.shape)
+    current_spin = state.spins[tuple(seed_idx)]
+    trial_spin = get_trial_spin(
+        rng_key=spin_key, state=state, current_spin=current_spin
+    )
+
+    selection = ClusterSelection.from_seed_idx(
+        cluster_solution=solution, seed_idx=seed_idx
+    )
+
+    trial_spins = jnp.where(selection.selected, trial_spin, state.spins)
+
+    where = lambda s: s.spins
+    trial_state = eqx.tree_at(where, state, trial_spins)
+
+    delta_H = get_hamiltonian(trial_state) - get_hamiltonian(state)
+
+    # Probabilistically select trial state
+    accept = metropolis_hastings_accept(
+        rng_key=accept_key, beta=state.env.beta, delta=delta_H
+    )
+
+    dbg("delta_H={}", delta_H)
+    dbg("accept={}", accept)
+    new_state = lax.cond(accept, lambda: trial_state, lambda: state)
+    return new_state
 
 
 class ClusterSolverState(eqx.Module):
