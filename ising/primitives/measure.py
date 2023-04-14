@@ -25,8 +25,9 @@ def get_hamiltonian(state: State) -> ScalarFloat:
     spins = state.spins
 
     # Find a kernel we can use with convolution
-    kernel = generate_binary_structure(state.dim, 1)
-    np.put(kernel, kernel.size // 2, False)
+    binary_kernel = generate_binary_structure(state.dim, 1)
+    np.put(binary_kernel, binary_kernel.size // 2, False)
+    kernel = binary_kernel.astype(spins.dtype)
 
     H: ScalarFloat = jnp.asarray(0.0)
     spins_sq = spins**2
@@ -44,7 +45,7 @@ def get_hamiltonian(state: State) -> ScalarFloat:
     H -= env.interaction_anisotropy * spins_sq.sum()
 
     # L - Calculate bicubic exchange energy (nearest neighbour)
-    H -= env.interaction_bicubic(
+    H -= env.interaction_bicubic * (
         (spins_sq * spins_convolved + spins * spins_sq_convolved).sum()
     )
 
