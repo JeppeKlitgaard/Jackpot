@@ -1,16 +1,14 @@
 from __future__ import annotations
 
-from collections import deque
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING
 
 import equinox as eqx
 import jax.numpy as jnp
 import numpy as np
-from einops import rearrange
 from jax import Array, lax, random
 from jax import ensure_compile_time_eval as compile_time
-from jaxtyping import Bool, Float, Int, UInt
+from jaxtyping import Bool, Float, UInt
 
 from ising.primitives.local import get_random_point_idx
 from ising.primitives.measure import get_hamiltonian_delta
