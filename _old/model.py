@@ -14,14 +14,6 @@ from matplotlib.figure import Figure
 from scipy import constants
 from scipy.ndimage import generate_binary_structure
 
-from ising.primitives import (
-    TBCModes,
-    get_hamiltonian,
-    get_magnetisation_density,
-    pvget_equilibrium_energy_and_magnetisation,
-    pvrun_mcmc_steps,
-    temperature_to_beta,
-)
 from ising.typing import ScalarInt, TSpin, TSpins
 from ising.utils.types import lists_to_tuples
 
@@ -221,11 +213,9 @@ class IsingModelND:
         bc_mode_value: float | None = 0.0,
     ) -> None:
         temperatures = jnp.array(
-            
-                [temperature_or_temperatures]
-                if isinstance(temperature_or_temperatures, float)
-                else temperature_or_temperatures
-            
+            [temperature_or_temperatures]
+            if isinstance(temperature_or_temperatures, float)
+            else temperature_or_temperatures
         )
 
         N = temperatures.size
@@ -273,11 +263,9 @@ class IsingModelND:
         bc_mode_value: float | None = 0.0,
     ):
         temperatures = jnp.array(
-            
-                [temperature_or_temperatures]
-                if isinstance(temperature_or_temperatures, float)
-                else temperature_or_temperatures
-            
+            [temperature_or_temperatures]
+            if isinstance(temperature_or_temperatures, float)
+            else temperature_or_temperatures
         )
 
         N = temperatures.size

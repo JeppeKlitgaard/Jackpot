@@ -43,8 +43,10 @@ lint = [
 check = {cmd = "mypy", help = "Run mypy"}
 test = {cmd = "pytest", help = "Run pytest"}
 ruff-fix = [
+    {cmd = "black ."},
     {cmd = "ruff --fix ."},
     {cmd = "nbqa ruff . --fix"},
+    {cmd = "nbqa black ."},
 ]
 
 dev = [
@@ -64,17 +66,14 @@ strict = true
 show_error_codes = true
 
 disallow_untyped_calls = false
+disallow_untyped_decorators = false
 
 files = ["ising"]
 
 plugins = ["numpy.typing.mypy_plugin"]
 
 [[tool.mypy.overrides]]
-module = ["numpy.*", "jax.*"]
-disallow_untyped_calls = false
-
-[[tool.mypy.overrides]]
-module = ["matplotlib.*", "scipy.*"]
+module = ["matplotlib.*", "scipy.*", "equinox.*"]
 ignore_missing_imports = true
 
 # Ruff
@@ -94,6 +93,7 @@ ignore = [
     "E731",
     "F821",
     "F722",
+    "UP037",
 ]
 
 [build-system]

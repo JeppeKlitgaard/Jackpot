@@ -28,10 +28,8 @@ def get_random_point_idx2(rng_key: RNGKey, shape: TShape) -> TIndex:
 
     return idx
 
-get_random_point_idx2 = jit(
-    get_random_point_idx2, static_argnames=("shape")
-)
 
+get_random_point_idx2 = jit(get_random_point_idx2, static_argnames=("shape"))
 
 
 def temperature_to_beta(temperature_or_temperatures: ScalarFloat) -> ScalarFloat:
@@ -39,9 +37,7 @@ def temperature_to_beta(temperature_or_temperatures: ScalarFloat) -> ScalarFloat
     return 1.0 / reciprocal
 
 
-def get_random_point_idx(
-    rng_key: KeyArray, dimensionality: int, size: int
-) -> TIndex:
+def get_random_point_idx(rng_key: KeyArray, dimensionality: int, size: int) -> TIndex:
     return tuple(random.randint(rng_key, (dimensionality,), minval=0, maxval=size))
 
 
@@ -263,14 +259,10 @@ def run_mcmc_step(
     # Change if new energy is lower
     # Or if higher but boltzmann says we should
     # Else return old state
-    def if_energy_lower(
-        state: TSpins, idx: TIndex, trial_spin: TSpin
-    ) -> TSpins:
+    def if_energy_lower(state: TSpins, idx: TIndex, trial_spin: TSpin) -> TSpins:
         return state.at[idx].set(trial_spin)
 
-    def if_energy_higher(
-        state: TSpins, idx: TIndex, trial_spin: TSpin
-    ) -> TSpins:
+    def if_energy_higher(state: TSpins, idx: TIndex, trial_spin: TSpin) -> TSpins:
         out: Array = lax.cond(
             jnp.exp(-beta * H_delta) > random.uniform(boltzmann_key),
             lambda s, i, t: s.at[i].set(t),
