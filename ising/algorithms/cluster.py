@@ -8,7 +8,6 @@ from jax import Array, lax, random
 from jaxtyping import Bool, Int, UInt
 
 from ising.algorithms.local import metropolis_hastings_accept
-from ising.debug import dbg
 from ising.primitives.cluster import get_cluster_linkage_factors
 from ising.primitives.local import get_random_point_idx
 from ising.primitives.measure import get_hamiltonian
@@ -42,6 +41,7 @@ class ClusterSolution(eqx.Module):
     links: Bool[Array, "ndim, *dims"]
 
     @classmethod
+    @eqx.filter_jit
     def clusterise_state(cls, rng_key: RNGKey, state: State) -> Self:
         spins = state.spins
         shape = spins.shape
@@ -108,6 +108,7 @@ class ClusterSelection(eqx.Module):
         """
 
     @classmethod
+    @eqx.filter_jit
     def new(
         cls, selected: Bool[Array, "*dims"], cluster_solution: ClusterSolution
     ) -> Self:
@@ -119,6 +120,7 @@ class ClusterSelection(eqx.Module):
         )
 
     @classmethod
+    @eqx.filter_jit
     def from_seed_idx(
         cls, cluster_solution: ClusterSolution, seed_idx: UInt[Array, a]
     ) -> Self:
@@ -139,6 +141,7 @@ class ClusterSelection(eqx.Module):
         return selector
 
     @staticmethod
+    @eqx.filter_jit
     def should_continue(cluster_selector: ClusterSelection) -> bool:
         """
         Used as part of the LAX `while_loop` to determine whether to exit loop.
@@ -146,6 +149,7 @@ class ClusterSelection(eqx.Module):
         return cluster_selector.is_done == False  # noqa: E712
 
     @staticmethod
+    @eqx.filter_jit
     def expand_selection_step(cluster_selector: ClusterSelection) -> ClusterSelection:
         """
         A single step that expands our cluster selection by following the
@@ -192,36 +196,50 @@ class ClusterSelection(eqx.Module):
 
 @eqx.filter_jit
 def wolff_sweep(rng_key: RNGKey, state: State) -> State:
-    print("Recompiled")
     point_key, spin_key, accept_key = random.split(key=rng_key, num=3)
+
     # First step is solving for the clusters
     solution = ClusterSolution.clusterise_state(rng_key=rng_key, state=state)
 
+    # Next we find a cluster and select it
     seed_idx = get_random_point_idx(rng_key=point_key, shape=state.shape)
     current_spin = state.spins[tuple(seed_idx)]
-    trial_spin = get_trial_spin(
-        rng_key=spin_key, state=state, current_spin=current_spin
-    )
 
     selection = ClusterSelection.from_seed_idx(
         cluster_solution=solution, seed_idx=seed_idx
     )
 
+    # Set the cluster to our a new spin on our trial state
+    trial_spin = get_trial_spin(
+        rng_key=spin_key, state=state, current_spin=current_spin
+    )
     trial_spins = jnp.where(selection.selected, trial_spin, state.spins)
 
     where = lambda s: s.spins
     trial_state = eqx.tree_at(where, state, trial_spins)
 
-    delta_H = get_hamiltonian(trial_state) - get_hamiltonian(state)
+    # Update number of steps taken
+    new_steps = selection.selected.sum()
+    where = lambda s: s.steps
+    trial_state = eqx.tree_at(where, trial_state, trial_state.steps + new_steps)
 
     # Probabilistically select trial state
-    accept = metropolis_hastings_accept(
-        rng_key=accept_key, beta=state.env.beta, delta=delta_H
-    )
+    # This is a standard technique when using external field or anisotropy
+    # interactions.
+    # It essentially adds a Metropolis-Hastings like transition probability
+    # to the cluster update, which enables these dynamics in a way that
+    # cannot be accomplished using link dynamics.
+    if state.env.probabilistic_cluster_accept:
+        delta_H = get_hamiltonian(trial_state) - get_hamiltonian(state)
+        accept = metropolis_hastings_accept(
+            rng_key=accept_key, beta=state.env.beta, delta=delta_H
+        )
 
-    dbg("delta_H={}", delta_H)
-    dbg("accept={}", accept)
-    new_state = lax.cond(accept, lambda: trial_state, lambda: state)
+        new_state = lax.cond(accept, lambda: trial_state, lambda: state)
+
+    else:
+        new_state = trial_state
+
     return new_state
 
 
@@ -250,10 +268,12 @@ class ClusterSolverState(eqx.Module):
     is_done: bool
 
     @staticmethod
+    @eqx.filter_jit
     def should_continue(cluster_state: Self) -> bool:
         return cluster_state.is_done == False  # noqa: E712
 
     @staticmethod
+    @eqx.filter_jit
     def evolve(cluster_state: Self) -> Self:
         cs = cluster_state
         new_key, randoms_key = random.split(cluster_state.rng_key)

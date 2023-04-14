@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from typing import Self
 
 import equinox as eqx
@@ -59,6 +60,35 @@ class Environment(EnsamblableModule):
     # Method
     algorithm: Algorithm = eqx.static_field()
 
+    # Configuration flags
+    # Whether to apply probablistic cluster acceptance modification
+    # This is needed for systems with external fields or anisotropy
+    # But the algorithm has a higher (non-zero) rejection rate in this
+    # case, so when not needed it should be disabled
+    probabilistic_cluster_accept: bool = eqx.static_field()
+
+    def __post_init__(self) -> None:
+        is_cluster_algorithm = self.algorithm in [
+            Algorithm.SWENDSEN_WANG,
+            Algorithm.WOLFF,
+        ]
+
+        has_external_interactions = any(
+            self.interaction_external_field, self.interaction_anisotropy
+        )
+
+        if (
+            is_cluster_algorithm
+            and has_external_interactions
+            and not self.probabilistic_cluster_accept
+        ):
+            _msg = (
+                "System environment has external interactions and is using cluster "
+                "algorithm, but has not enabled the probablistic cluster "
+                "accept modification!"
+            )
+            warnings.warn(_msg, UserWarning)
+
     @classmethod
     @eqx.filter_jit
     def from_spin(
@@ -73,6 +103,7 @@ class Environment(EnsamblableModule):
         interaction_external_field: float,
         nuclear_magnetic_moment: float,
         algorithm: Algorithm,
+        probabilistic_cluster_accept: bool,
     ) -> Self:
         """
         Construct an environment from a half-integer spin given as a float.
@@ -89,6 +120,7 @@ class Environment(EnsamblableModule):
             interaction_external_field=interaction_external_field,
             nuclear_magnetic_moment=nuclear_magnetic_moment,
             algorithm=algorithm,
+            probabilistic_cluster_accept=probabilistic_cluster_accept,
         )
 
 
