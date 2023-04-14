@@ -6,15 +6,15 @@ from __future__ import annotations
 from collections import deque
 from collections.abc import Callable
 from enum import IntEnum, auto
-from typing import TYPE_CHECKING
-from einops import rearrange
+from typing import TYPE_CHECKING, Self
 
 import equinox as eqx
 import jax.numpy as jnp
 import numpy as np
+from einops import rearrange
 from jax import Array, lax, random
 from jax import ensure_compile_time_eval as compile_time
-from jaxtyping import Bool, Float, UInt
+from jaxtyping import Bool, Float, UInt, Int
 
 from ising.primitives2 import (
     get_hamiltonian,
@@ -25,6 +25,7 @@ from ising.primitives2 import (
     get_trial_spin,
     set_spin,
 )
+from ising.typing import TSpins
 
 if TYPE_CHECKING:
     from ising.state import State
@@ -323,9 +324,10 @@ import matplotlib.pyplot as plt
 plt.rcParams["figure.figsize"] = (3, 3)
 plt.rcParams["figure.dpi"] = 100
 
-# from scipy.signal import convolve
 from jax.scipy.signal import convolve
 import matplotlib.patches as mpatches
+
+# from scipy.signal import convolve
 
 
 def show(arr, title):
@@ -343,12 +345,126 @@ def show(arr, title):
     plt.legend(handles=patches, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.0)
 
 
+def convolve_with_wrapping(array, conv_array):
+    assert array.ndim == conv_array.ndim
+    pad_sizes = np.asarray(conv_array.shape) // 2
+
+    padded_shape = tuple(
+        ax + pad_size * 2 for ax, pad_size in zip(array.shape, pad_sizes)
+    )
+    padded_array = jnp.zeros(padded_shape, dtype=array.dtype)
+    # Add array to padded array
+    middle_slice = tuple(
+        slice(pad_size, dim + pad_size) for pad_size, dim in zip(pad_sizes, array.shape)
+    )
+    padded_array = padded_array.at[middle_slice].set(array)
+
+    # Add 'sides'
+    for i in range(array.ndim):
+        slicer1_from = tuple(
+            slice(dim + pad_size - pad_size, dim + 2 * pad_size - pad_size)
+            if i == j
+            else slice(None)
+            for j, (pad_size, dim) in enumerate(zip(pad_sizes, array.shape))
+        )
+        slicer1_to = tuple(
+            slice(0, pad_size) if i == j else slice(None)
+            for j, (pad_size, dim) in enumerate(zip(pad_sizes, array.shape))
+        )
+
+        slicer2_from = tuple(
+            slice(pad_size, 2 * pad_size) if i == j else slice(None)
+            for j, (pad_size, dim) in enumerate(zip(pad_sizes, array.shape))
+        )
+        slicer2_to = tuple(
+            slice(dim + pad_size, dim + 2 * pad_size) if i == j else slice(None)
+            for j, (pad_size, dim) in enumerate(zip(pad_sizes, array.shape))
+        )
+        padded_array.at[slicer1_to].set(padded_array[slicer1_from])
+        padded_array.at[slicer2_to].set(padded_array[slicer2_from])
+
+    print(padded_array.dtype)
+    print(conv_array.dtype)
+
+    convolved_padded = convolve(padded_array, conv_array, mode="same")
+    print(convolved_padded.dtype)
+    convolved = convolved_padded[middle_slice].astype(array.dtype)
+
+    # print(padded_array)
+    # print(convolved_padded)
+    # print(convolved)
+
+    return convolved
+
+
+class ClusterSolverState(eqx.Module):
+    do_not_visit: Bool[Array, "..."]
+    updated: Bool[Array, "..."]
+
+    neighbour_kernel: Int[Array, "..."]
+
+    randoms: ...
+    random_accept: ...
+
+    rng_key: RNGKey
+    threshold: float
+
+    steps: int
+    is_done: bool
+
+    @staticmethod
+    def should_continue(cluster_state: Self) -> bool:
+        return cluster_state.is_done == False
+
+    @staticmethod
+    def evolve(cluster_state: Self) -> Self:
+        cs = cluster_state
+        new_key, randoms_key = random.split(cluster_state.rng_key)
+
+        # Find neighbours
+        neighbour_finder = cs.updated.astype(int)
+        neighbour_finder = convolve_with_wrapping(neighbour_finder, cs.neighbour_kernel)
+        neighbours = jnp.clip(neighbour_finder, 0, 2).astype(bool)
+
+        # Find candidates
+        candidates = neighbours & ~cs.do_not_visit & ~cs.updated
+
+        # Generate random numbers for probabilistic addition to cluster
+        randoms = random.uniform(key=randoms_key, shape=candidates.shape)
+        random_accept = cs.threshold > randoms
+
+        # Find new cluster members
+        new_cluster_members = candidates & random_accept
+
+        # Reflect updates on other arrays
+        updated = cs.updated | new_cluster_members
+
+        # We have visited all states this time around, thus
+        # no unvisited states if we didn't add new members
+        # in which case we are done
+        is_done = new_cluster_members.sum() == 0
+
+        return ClusterSolverState(
+            do_not_visit=cs.do_not_visit,
+            updated=updated,
+            neighbour_kernel=cs.neighbour_kernel,
+            rng_key=new_key,
+            threshold=cs.threshold,
+            steps=cs.steps + new_cluster_members.sum(),
+            is_done=is_done,
+            randoms=randoms,
+            random_accept=random_accept,
+        )
+
+
 # @eqx.filter_jit
 def wolff_sweep(rng_key: RNGKey, state: State) -> State:
     print("Recompiled")
     spins = state.spins
 
-    rng_key, seed_key, spin_key, accept_key, random_key = random.split(rng_key, 5)
+    rng_key, seed_key, spin_key, accept_key, random_key, cluster_key = random.split(
+        rng_key, 6
+    )
     seed_idx = get_random_point_idx(rng_key=seed_key, shape=state.shape)
     seed_spin = spins[tuple(seed_idx)]
 
@@ -358,65 +474,104 @@ def wolff_sweep(rng_key: RNGKey, state: State) -> State:
     spin_magnitude = jnp.abs(new_spin - seed_spin)
     link_factor = get_cluster_linkage_factor(state=state, spin_magnitude=spin_magnitude)
     threshold = 1.0 - jnp.exp(-link_factor * state.env.beta)
+    print(threshold)
 
-    # Flip spins as we go on trial state and determine whether to manifest
-    # later
-    trial_state = set_spin(state=state, idx=seed_idx, new_spin=new_spin)
+    # Construct initial cluster state
+    updated = jnp.zeros(spins.shape, dtype=bool)
+    updated = updated.at[tuple(seed_idx)].set(True)
+    do_not_visit = spins != seed_spin
+    random_accept = jnp.ones(spins.shape, dtype=bool)
+    conv = jnp.array(
+        [
+            [0, 1, 0],
+            [1, -99999, 1],
+            [0, 1, 0],
+        ],
+        dtype=int,
+    )
 
-    unvisited = deque([seed_idx])
+    cluster_state = ClusterSolverState(
+        do_not_visit=do_not_visit,
+        updated=updated,
+        neighbour_kernel=conv,
+        rng_key=cluster_key,
+        threshold=threshold,
+        randoms=jnp.zeros(spins.shape, dtype=float),
+        random_accept=random_accept,
+        steps=0,
+        is_done=False,
+    )
 
-    def dbg(*args, **kwargs):
-        # print(*args, **kwargs)
-        ...
+    show(cluster_state.updated, "updated")
+    cluster_state = lax.while_loop(
+        cluster_state.should_continue, cluster_state.evolve, cluster_state
+    )
+    show(cluster_state.do_not_visit, "do_not_visit")
+    show(cluster_state.updated, "updated")
+    show(cluster_state.randoms, "randoms")
+    show(cluster_state.random_accept, "random_accept")
 
-    steps = 0
 
-    class Status(IntEnum):
-        NO_VISIT = auto()
-        UNVISITED = auto()
-        VISITED = auto()
 
-    # Create cluster status array of same shape as initial state
-    # 0: Do not visit because spin is wrong
-    # 1: Unvisited
-    # 2: Visited and randomised in trial state
-    shape = state.spins.shape
-    size = state.spins.size
+    print(cluster_state)
 
     # Do not visit these sites because spin alignment is wrong
-    do_not_visit = trial_state.spins != seed_spin
+    do_not_visit = trial_spins != seed_spin
 
     # These sites have been visited and trial state updated
     updated = jnp.zeros(shape, dtype=bool)
     updated = updated.at[tuple(seed_idx)].set(True)
 
-    print(do_not_visit)
-    # show(do_not_visit, "do_not_visit")
-    # show(updated, "updated")
 
-    updated_idxs = jnp.asarray(jnp.nonzero(updated, size=size, fill_value=-1)).T
-    print("updated_idxs")
-    print(updated_idxs)
-    # We can't use convolution because it does not support periodic boundary
-    # conditions :(
-    vget_nearest_neighbour_idxs = eqx.filter_vmap(in_axes=(None, 0))(
-        get_nearest_neighbour_idxs
+    conv = jnp.array(
+        [
+            [0, 1, 0],
+            [1, -99999, 1],
+            [0, 1, 0],
+        ],
+        dtype=int,
     )
-    raw_neighbour_idxs = vget_nearest_neighbour_idxs(state, updated_idxs)
-    neighbour_idxs = rearrange(raw_neighbour_idxs, "batch site idx -> (batch site) idx")
 
-    print("neighbour_idxs")
-    print(neighbour_idxs)
-    flat_neighbour_idxs = jnp.ravel_multi_index(neighbour_idxs.T, shape, mode="wrap")
-    neighbours = jnp.zeros(shape, dtype=bool)
-    neighbours_flat = neighbours.reshape(-1)
-    neighbours_flat = neighbours_flat.at[flat_neighbour_idxs].set(True)
-    neighbours = neighbours_flat.reshape(shape)
+    neighbour_finder = updated.astype(int)
+    print(neighbour_finder.dtype)
+    neighbour_finder = convolve_with_wrapping(neighbour_finder, conv)
+    neighbours = np.clip(neighbour_finder, 0, 2)
+
+    # updated_idxs = jnp.asarray(jnp.nonzero(updated, size=size, fill_value=-1)).T
+    # print("updated_idxs")
+    # print(updated_idxs)
+
+    # # We can't use convolution because it does not support periodic boundary
+    # # conditions :(
+    # vget_nearest_neighbour_idxs = eqx.filter_vmap(in_axes=(None, 0))(
+    #     get_nearest_neighbour_idxs
+    # )
+    # raw_neighbour_idxs = vget_nearest_neighbour_idxs(state, updated_idxs)
+    # neighbour_idxs = rearrange(raw_neighbour_idxs, "batch site idx -> (batch site) idx")
+
+    # print("neighbour_idxs")
+    # print(neighbour_idxs)
+    # flat_neighbour_idxs = jnp.ravel_multi_index(neighbour_idxs.T, shape, mode="wrap")
+    # neighbours = jnp.zeros(shape, dtype=bool)
+    # neighbours_flat = neighbours.reshape(-1)
+    # neighbours_flat = neighbours_flat.at[flat_neighbour_idxs].set(True)
+    # neighbours = neighbours_flat.reshape(shape)
 
     # show(neighbours, "neighbours")
+    candidates = neighbours & ~do_not_visit & ~updated
 
-    to_try = neighbours & ~do_not_visit & ~updated
-    # show(to_try, "to_try")
+    randoms = random.uniform(key=random_key, shape=shape)
+    random_accept = threshold > randoms
+
+    new_cluster_members = candidates & random_accept
+    show(new_cluster_members, "new_cluster_members")
+
+    # Reflect updates on other arrays
+    updated = updated & new_cluster_members
+    trial_spins = jnp.where(new_cluster_members, new_spin, trial_spins)
+
+    show(state.spins, "state.spins")
+    show(trial_spins, "trial_spins")
     # # Initialise
     # status = Status.NO_VISIT * jnp.ones(shape, dtype=int)
     # # Mark all correctly aligned spins as unvisited
@@ -425,8 +580,6 @@ def wolff_sweep(rng_key: RNGKey, state: State) -> State:
     # status = status.at[tuple(seed_idx)].set(Status.VISITED)
     # status = status.at[tuple([seed_idx[0] + 1, seed_idx[1]])].set(Status.VISITED)
 
-    randoms = random.uniform(key=random_key, shape=shape)
-    mask = threshold > randoms
     print(randoms)
     print(mask)
 
