@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import numpy as np
+import jax.numpy as jnp
 from jax import Array
 from jaxtyping import Float
 
@@ -31,7 +31,7 @@ def get_cluster_linkage_factors(
     """
     # i = spins
     # j = neighbours
-    link_factors = np.zeros_like(neighbours)
+    link_factors = jnp.zeros_like(neighbours)
 
     # J - bilinear exchange energy (nearest neighbour)
     link_factors += state.env.interaction_bilinear * spins * neighbours
