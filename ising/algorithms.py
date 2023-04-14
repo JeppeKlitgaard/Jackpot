@@ -380,7 +380,7 @@ class ClusterSolverState(eqx.Module):
 
     @staticmethod
     def should_continue(cluster_state: Self) -> bool:
-        return cluster_state.is_done == False
+        return cluster_state.is_done == False  # noqa: E712
 
     @staticmethod
     def evolve(cluster_state: Self) -> Self:
