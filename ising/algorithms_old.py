@@ -5,7 +5,6 @@ from __future__ import annotations
 
 from collections import deque
 from collections.abc import Callable
-from enum import IntEnum, auto
 from typing import TYPE_CHECKING, Self
 
 import equinox as eqx
@@ -14,18 +13,12 @@ import numpy as np
 from einops import rearrange
 from jax import Array, lax, random
 from jax import ensure_compile_time_eval as compile_time
-from jaxtyping import Bool, Float, UInt, Int
+from jaxtyping import Bool, Float, Int, UInt
 
-from ising.primitives2 import (
-    get_hamiltonian,
-    get_hamiltonian_delta,
-    get_nearest_neighbour_idxs,
-    get_random_point_idx,
-    get_spins,
-    get_trial_spin,
-    set_spin,
-)
-from ising.typing import TSpins
+from ising.primitives.local import get_random_point_idx
+from ising.primitives.measure import get_hamiltonian_delta
+from ising.primitives.state import get_trial_spin
+from ising.primitives.utils import set_spin
 
 if TYPE_CHECKING:
     from ising.state import State
@@ -35,124 +28,6 @@ if TYPE_CHECKING:
         [RNGKey, Float[Array, ""], Float[Array, ""]], Bool[Array, ""]
     ]
 
-
-@eqx.filter_jit
-def metropolis_hastings_accept(
-    rng_key: RNGKey, beta: Float[Array, ""], delta: Float[Array, ""]
-) -> Bool[Array, ""]:
-    if_energy_lower = lambda: True
-
-    def if_energy_higher() -> bool:
-        x = random.uniform(rng_key)
-        threshold = jnp.exp(-beta * delta)
-        return threshold > x
-
-    return lax.cond(delta < 0, if_energy_lower, if_energy_higher)
-
-
-@eqx.filter_jit
-def glauber_accept(
-    rng_key: RNGKey, beta: Float[Array, ""], delta: Float[Array, ""]
-) -> Bool[Array, ""]:
-    x = random.uniform(rng_key)
-    threshold = 1.0 / (1.0 + jnp.exp(beta * delta))
-    acceptance = threshold > x
-
-    return acceptance
-
-
-@eqx.filter_jit
-def local_update_step(
-    accept_func: TAcceptFunc,
-    idx: UInt[Array, ""],
-    rng_key: RNGKey,
-    state: State,
-) -> State:
-    spin_key, accept_key = random.split(rng_key, 2)
-
-    current_spin = state.spins[tuple(idx)]
-    trial_spin = get_trial_spin(
-        rng_key=spin_key, state=state, current_spin=current_spin
-    )
-    H_delta = get_hamiltonian_delta(state=state, idx=idx, trial_spin=trial_spin)
-
-    accept = accept_func(accept_key, state.env.beta, H_delta)
-    new_spin: TSpin = jnp.where(accept, trial_spin, current_spin)
-    state = set_spin(state=state, idx=idx, new_spin=new_spin)
-
-    # Update steps
-    where = lambda s: s.steps
-    state = eqx.tree_at(where, state, state.steps + 1)
-
-    return state
-
-
-@eqx.filter_jit
-def local_update_sweep(
-    accept_func: TAcceptFunc, rng_key: RNGKey, state: State
-) -> State:
-    with compile_time():
-        idxs = tuple(np.ndindex(state.spins.shape))
-
-    keys = random.split(key=rng_key, num=state.spins.size)
-
-    # For loop that carries out individual steps
-    def body_fun(i: int, state: State) -> State:
-        out: State = local_update_step(
-            accept_func,
-            jnp.asarray(idxs)[i],
-            keys[i],
-            state,
-        )
-        return out
-
-    state = lax.fori_loop(0, len(idxs), body_fun, state)
-
-    return state
-
-
-@eqx.filter_jit
-def metropolis_hastings_step(rng_key: RNGKey, state: State) -> State:
-    point_key, update_key = random.split(rng_key, 2)
-    idx = get_random_point_idx(rng_key=point_key, shape=state.shape)
-
-    return local_update_step(
-        accept_func=metropolis_hastings_accept,
-        idx=idx,
-        rng_key=update_key,
-        state=state,
-    )
-
-
-@eqx.filter_jit
-def metropolis_hastings_sweep(rng_key: RNGKey, state: State) -> State:
-    return local_update_sweep(
-        accept_func=metropolis_hastings_accept,
-        rng_key=rng_key,
-        state=state,
-    )
-
-
-@eqx.filter_jit
-def glauber_step(rng_key: RNGKey, state: State) -> State:
-    point_key, update_key = random.split(rng_key, 2)
-    idx = get_random_point_idx(rng_key=point_key, shape=state.shape)
-
-    return local_update_step(
-        accept_func=glauber_accept,
-        idx=idx,
-        rng_key=update_key,
-        state=state,
-    )
-
-
-@eqx.filter_jit
-def glauber_sweep(rng_key: RNGKey, state: State) -> State:
-    return local_update_sweep(
-        accept_func=glauber_accept,
-        rng_key=rng_key,
-        state=state,
-    )
 
 
 # @eqx.filter_jit
@@ -285,92 +160,133 @@ def wolff_sweep(rng_key: RNGKey, state: State) -> State:
     return state
 
 
-import matplotlib.pyplot as plt
+class ClusterSelection(eqx.Module):
+    selected: Bool[Array, "*dims"]
+    cluster_solution: ClusterSolution
+    is_done: bool
+    steps: int
+    """
+    Marks a single selected cluster.
 
-plt.rcParams["figure.figsize"] = (3, 3)
-plt.rcParams["figure.dpi"] = 100
+    This is done by iteratively following and marking sites from an initial
+    seed site via the links obtained in the cluster solution.
 
-from jax.scipy.signal import convolve
-import matplotlib.patches as mpatches
+    Together `cluster_solution.links` and `selected` make up a graph of spin
+    sites and interconnecting links.
 
-# from scipy.signal import convolve
+    This process is fundamentally unparallelisable and cannot be vectorised
+    further than what is done below (after for loop is unrolled at compile time).
 
+    Attributes:
+        selected: Array of bools masking which spin sites are part of this
+            specific cluster.
+        cluster_solution: A solution from the clustering routine.
+            This object holds the probabilistically determined links
+        is_done: boolean flag demarking whether cluster selection has terminated
+        steps: number of steps it has taken to find cluster from seed index
+        """
 
-def show(arr, title):
-    plt.figure()
-    im = plt.imshow(arr, interpolation=None)
-    plt.title(title)
-
-    # Legends
-    values = np.unique(arr.ravel())
-    colors = [im.cmap(im.norm(value)) for value in values]
-    patches = [
-        mpatches.Patch(color=colors[i], label=f"{values[i]}")
-        for i in range(len(values))
-    ]
-    plt.legend(handles=patches, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.0)
-
-
-def convolve_with_wrapping(array, conv_array):
-    assert array.ndim == conv_array.ndim
-    pad_sizes = np.asarray(conv_array.shape) // 2
-
-    padded_shape = tuple(
-        ax + pad_size * 2 for ax, pad_size in zip(array.shape, pad_sizes)
-    )
-    padded_array = jnp.zeros(padded_shape, dtype=array.dtype)
-    # Add array to padded array
-    middle_slice = tuple(
-        slice(pad_size, dim + pad_size) for pad_size, dim in zip(pad_sizes, array.shape)
-    )
-    padded_array = padded_array.at[middle_slice].set(array)
-
-    # Add 'sides'
-    for i in range(array.ndim):
-        slicer1_from = tuple(
-            slice(dim + pad_size - pad_size, dim + 2 * pad_size - pad_size)
-            if i == j
-            else slice(None)
-            for j, (pad_size, dim) in enumerate(zip(pad_sizes, array.shape))
-        )
-        slicer1_to = tuple(
-            slice(0, pad_size) if i == j else slice(None)
-            for j, (pad_size, dim) in enumerate(zip(pad_sizes, array.shape))
+    @classmethod
+    def new(
+        cls, selected: Bool[Array, *dims], cluster_solution: ClusterSolution
+    ) -> Self:
+        return cls(
+            selected=selected,
+            cluster_solution=cluster_solution,
+            is_done=False,
+            steps=0,
         )
 
-        slicer2_from = tuple(
-            slice(pad_size, 2 * pad_size) if i == j else slice(None)
-            for j, (pad_size, dim) in enumerate(zip(pad_sizes, array.shape))
+    @classmethod
+    def from_seed_idx(
+        cls, cluster_solution: ClusterSolution, seed_idx: UInt[Array, a]
+    ) -> Self:
+        """
+        Find a full selection from a single seed site.
+
+        Uses a un-unrollable while-loop underneath.
+        """
+        spins_shape = cluster_solution.links.shape[1:]
+        selected = jnp.zeros(shape=spins_shape, dtype=bool)
+        selected = selected.at[tuple(seed_idx)].set(True)
+
+        selector = cls.new(selected=selected, cluster_solution=cluster_solution)
+        selector = lax.while_loop(
+            selector.should_continue, selector.expand_selection_step, selector
         )
-        slicer2_to = tuple(
-            slice(dim + pad_size, dim + 2 * pad_size) if i == j else slice(None)
-            for j, (pad_size, dim) in enumerate(zip(pad_sizes, array.shape))
+
+        return selector
+
+    @staticmethod
+    def should_continue(cluster_selector: ClusterSelection) -> bool:
+        """
+        Used as part of the LAX `while_loop` to determine whether to exit loop.
+        """
+        return cluster_selector.is_done == False  # noqa: E712
+
+    @staticmethod
+    def expand_selection_step(cluster_selector: ClusterSelection) -> ClusterSelection:
+        """
+        A single step that expands our cluster selection by following the
+        edges in our spin-link graph.
+        """
+        selector = cluster_selector
+        solution = cluster_selector.cluster_solution
+        # Holds all selected sites this round
+        selected = selector.selected
+
+        # This can be possibly be done with broadcasting,
+        # but since we JIT anyway we prefer a more readable version.
+        # Since selection shape is known at compile time this loop gets
+        # unrolled trivially by XLA.
+        for i in range(selector.selected.ndim):
+            # i denotes the 'layer', where each layer corresponds to
+            # links along a particular axis.
+            # In 3D: [0] is the up-down axis, [1] is left-right, [2] is in-out
+            # Below we use up/down notation for all axis though
+
+            # All links connected to selected sites
+            links_to_try = selector.selected | jnp.roll(selector.selected, -1, i)
+
+            # Filter: only the links we have activated
+            links_selected = links_to_try & solution.links[i]
+
+            # Expand selected links since links are bidirectional
+            links_selected = links_selected | jnp.roll(links_selected, 1, i)
+
+            # Add newly selected sites
+            selected = selected | links_selected
+
+        # The sites that changed since last iteration
+        new_sites = selected ^ selector.selected
+        is_done = new_sites.sum() == 0
+
+        return ClusterSelection(
+            selected=selected,
+            cluster_solution=solution,
+            is_done=is_done,
+            steps=selector.steps + 1,
         )
-        padded_array.at[slicer1_to].set(padded_array[slicer1_from])
-        padded_array.at[slicer2_to].set(padded_array[slicer2_from])
 
-    print(padded_array.dtype)
-    print(conv_array.dtype)
-
-    convolved_padded = convolve(padded_array, conv_array, mode="same")
-    print(convolved_padded.dtype)
-    convolved = convolved_padded[middle_slice].astype(array.dtype)
-
-    # print(padded_array)
-    # print(convolved_padded)
-    # print(convolved)
-
-    return convolved
 
 
 class ClusterSolverState(eqx.Module):
-    do_not_visit: Bool[Array, "..."]
-    updated: Bool[Array, "..."]
+    """
+    A previous attempt at an iterative cluster grower.
 
-    neighbour_kernel: Int[Array, "..."]
+    There are a few bugs left, but the main principle is working.
+    Since this does selection and clustering in the same loop, this
+    algorithm is inefficient for evolvers that flip more than a single
+    cluster (Swendsen-Wang), but work decently for single-cluster methods
+    (Wolff).
 
-    randoms: ...
-    random_accept: ...
+    It uses a convolution behind the scenes to expand the selected cluster.
+    """
+
+    do_not_visit: Bool[Array, ...]
+    updated: Bool[Array, ...]
+
+    neighbour_kernel: Int[Array, ...]
 
     rng_key: RNGKey
     threshold: float
@@ -418,14 +334,13 @@ class ClusterSolverState(eqx.Module):
             threshold=cs.threshold,
             steps=cs.steps + new_cluster_members.sum(),
             is_done=is_done,
-            randoms=randoms,
-            random_accept=random_accept,
         )
 
 
 # @eqx.filter_jit
 def wolff_sweep(rng_key: RNGKey, state: State) -> State:
     print("Recompiled")
+    ClusterSolver.clusterise_state(rng_key, state)
     spins = state.spins
 
     rng_key, seed_key, spin_key, accept_key, random_key, cluster_key = random.split(
@@ -477,8 +392,6 @@ def wolff_sweep(rng_key: RNGKey, state: State) -> State:
     show(cluster_state.randoms, "randoms")
     show(cluster_state.random_accept, "random_accept")
 
-
-
     print(cluster_state)
 
     # Do not visit these sites because spin alignment is wrong
@@ -487,7 +400,6 @@ def wolff_sweep(rng_key: RNGKey, state: State) -> State:
     # These sites have been visited and trial state updated
     updated = jnp.zeros(shape, dtype=bool)
     updated = updated.at[tuple(seed_idx)].set(True)
-
 
     conv = jnp.array(
         [

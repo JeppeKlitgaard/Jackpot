@@ -13,7 +13,7 @@ from jax.random import KeyArray
 from jaxtyping import Float
 from matplotlib.figure import Figure
 
-from ising.algorithms import (
+from ising.algorithms.local import (
     glauber_step,
     glauber_sweep,
     metropolis_hastings_step,
