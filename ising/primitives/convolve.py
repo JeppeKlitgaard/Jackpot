@@ -39,8 +39,8 @@ def convolve_with_wrapping(array: Array, kernel: Array) -> Array:
             slice(dim + pad_size, dim + 2 * pad_size) if i == j else slice(None)
             for j, (pad_size, dim) in enumerate(zip(pad_sizes, array.shape))
         )
-        padded_array.at[slicer1_to].set(padded_array[slicer1_from])
-        padded_array.at[slicer2_to].set(padded_array[slicer2_from])
+        padded_array = padded_array.at[slicer1_to].set(padded_array[slicer1_from])
+        padded_array = padded_array.at[slicer2_to].set(padded_array[slicer2_from])
 
     convolved_padded = convolve(padded_array, kernel, mode="same")
     convolved = convolved_padded[middle_slice].astype(array.dtype)
