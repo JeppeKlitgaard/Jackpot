@@ -22,7 +22,7 @@ from ising.algorithms.local import (
 )
 from ising.module import EnsamblableModule
 from ising.primitives.measure import get_hamiltonian, get_magnetisation_density
-from ising.types import Algorithm, BCMode
+from ising.types import Algorithm
 from ising.typing import (
     RNGKey,
     ScalarInt,
@@ -59,19 +59,6 @@ class Environment(EnsamblableModule):
     # Method
     algorithm: Algorithm = eqx.static_field()
 
-    # Boundary conditions
-    bc_mode: BCMode = eqx.static_field()
-    bc_mode_value: float | None = eqx.static_field()
-
-    def __post_init__(
-        self,
-    ) -> None:
-        # Validate
-        if self.bc_mode == "constant" and self.bc_mode_value is None:
-            raise ValueError(
-                "Can't have unset boundary condition value with bc_mode='constant'"
-            )
-
     @classmethod
     @eqx.filter_jit
     def from_spin(
@@ -86,8 +73,6 @@ class Environment(EnsamblableModule):
         interaction_external_field: float,
         nuclear_magnetic_moment: float,
         algorithm: Algorithm,
-        bc_mode: BCMode,
-        bc_mode_value: TSpin | None = None,
     ) -> Self:
         """
         Construct an environment from a half-integer spin given as a float.
@@ -104,8 +89,6 @@ class Environment(EnsamblableModule):
             interaction_external_field=interaction_external_field,
             nuclear_magnetic_moment=nuclear_magnetic_moment,
             algorithm=algorithm,
-            bc_mode=bc_mode,
-            bc_mode_value=bc_mode_value,
         )
 
 

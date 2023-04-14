@@ -13,7 +13,6 @@ from ising.primitives.cluster import get_cluster_linkage_factors
 from ising.primitives.local import get_random_point_idx
 from ising.primitives.measure import get_hamiltonian
 from ising.primitives.state import get_trial_spin
-from ising.utils.graph import show
 
 if TYPE_CHECKING:
     from ising.state import State

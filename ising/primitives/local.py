@@ -8,8 +8,6 @@ from jax import Array, random
 from jax import ensure_compile_time_eval as compile_time
 from jaxtyping import Float, Int, UInt
 
-from ising.types import BCMode
-
 if TYPE_CHECKING:
     from ising.state import State
     from ising.typing import RNGKey, TIndex, TIndexArray, TShape
@@ -38,24 +36,13 @@ def apply_boundary_conditions(
     This resolves the indices using the boundary condition such that the
     returned indices are ∈ ℕ ∪ {0}.
     """
-    bc_mode = state.env.bc_mode
-    oob_idx = state.spins.size  # Guaranteed out-of-bounds
+    # Note: We assume square array
+    side_length = state.spins.shape[0]
+    upper_bound = side_length - 1
 
-    match bc_mode:
-        case BCMode.CONSTANT:
-            # Set high value to mark out-of-bounds
-            # More readable but requires concrete idxs:
-            # idxs = idxs.at[idxs < 0].set(oob_idx)
-            idxs = jnp.where(idxs >= 0, idxs, oob_idx)
-
-        case BCMode.PERIODIC:
-            # Note: We assume square array
-            side_length = state.spins.shape[0]
-            upper_bound = side_length - 1
-
-            # More readable but requires concrete idxs:
-            # idxs = idxs.at[idxs > upper_bound].add(-side_length)
-            idxs = jnp.where(idxs <= upper_bound, idxs, idxs - side_length)
+    # More readable but requires concrete idxs:
+    # idxs = idxs.at[idxs > upper_bound].add(-side_length)
+    idxs = jnp.where(idxs <= upper_bound, idxs, idxs - side_length)
 
     return idxs
 
@@ -85,19 +72,10 @@ def get_spins(*, state: State, idxs: UInt[Array, "a b"]) -> Float[Array, a]:
 
     This assumes idxs have already had boundary conditions applied.
     """
-    bc_mode = state.env.bc_mode
-    bc_mode_value = state.env.bc_mode_value
-
     spins = []
     for idx in idxs:
-        # Has potentially out-of-bounds indices after BC applied
-        # These are intended as sentinel-like values
-        if bc_mode == BCMode.CONSTANT:
-            spin = state.spins.at[tuple(idx)].get(mode="fill", fill_value=bc_mode_value)
-
         # For periodic we assume BC already applied
-        else:
-            spin = state.spins[tuple(idx)]
+        spin = state.spins[tuple(idx)]
 
         spins.append(spin)
 
