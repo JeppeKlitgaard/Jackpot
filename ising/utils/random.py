@@ -9,6 +9,7 @@ class EasyKey:
     """
     An easy key that can be used outside of a strictly stateless context.
     """
+
     def __init__(self, seed: int | Array):
         self.seed = seed
         self._key = random.PRNGKey(seed)
@@ -25,7 +26,7 @@ class EasyKey:
         """
         Return `num` fresh RNG keys as an array.
         """
-        self._key, *ks = random.split(self._key, num=num+1)
+        self._key, *ks = random.split(self._key, num=num + 1)
         return jnp.asarray(ks)
 
     def shaped(self, shape: TShape) -> Array:
@@ -34,7 +35,10 @@ class EasyKey:
         assert keys.ndim == 2
         assert keys.shape[1] == 2
 
-        key_shape = (*shape, 2,)
+        key_shape = (
+            *shape,
+            2,
+        )
         shaped_keys = keys.reshape(key_shape)
 
         return shaped_keys
