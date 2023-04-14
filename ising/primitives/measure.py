@@ -5,9 +5,9 @@ from typing import TYPE_CHECKING
 import jax.numpy as jnp
 import numpy as np
 from jax import Array
-from jax.scipy.signal import convolve
 from scipy.ndimage import generate_binary_structure
 
+from ising.primitives.convolve import convolve_with_wrapping
 from ising.primitives.local import get_nearest_neighbours
 
 if TYPE_CHECKING:
@@ -21,32 +21,31 @@ def get_magnetisation_density(state: State) -> ScalarFloat:
 
 
 def get_hamiltonian(state: State) -> ScalarFloat:
+    env = state.env
+    spins = state.spins
+
     # Find a kernel we can use with convolution
     kernel = generate_binary_structure(state.dim, 1)
     np.put(kernel, kernel.size // 2, False)
 
     H: ScalarFloat = jnp.asarray(0.0)
-    env = state.env
-    spins = state.spins
-    spins_sq = jnp.square(spins)
+    spins_sq = spins**2
+
+    spins_convolved = convolve_with_wrapping(spins, kernel=kernel)
+    spins_sq_convolved = convolve_with_wrapping(spins_sq, kernel=kernel)
 
     # J - Calculate bilinear exchange energy (nearest neighbour)
-    H -= env.interaction_bilinear * (spins * convolve(spins, kernel, mode="same")).sum()
+    H -= env.interaction_bilinear * (spins * spins_convolved).sum()
 
     # K - Calculate biquadratic exchange energy (nearest neighbour)
-    H -= (
-        env.interaction_biquadratic
-        * (spins_sq * convolve(spins_sq, kernel, mode="same")).sum()
-    )
+    H -= env.interaction_biquadratic * (spins_sq * spins_sq_convolved).sum()
 
     # D - Calculate anisotropy energy
     H -= env.interaction_anisotropy * spins_sq.sum()
 
     # L - Calculate bicubic exchange energy (nearest neighbour)
-    H -= (
-        env.interaction_bicubic
-        * 2
-        * (spins * convolve(spins_sq, kernel, mode="same")).sum()
+    H -= env.interaction_bicubic(
+        (spins_sq * spins_convolved + spins * spins_sq_convolved).sum()
     )
 
     # H - Calculate external field energy

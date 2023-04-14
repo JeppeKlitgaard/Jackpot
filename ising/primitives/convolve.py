@@ -4,9 +4,9 @@ from jax import Array
 from jax.scipy.signal import convolve
 
 
-def convolve_with_wrapping(array: Array, conv_array: Array) -> Array:
-    assert array.ndim == conv_array.ndim
-    pad_sizes = np.asarray(conv_array.shape) // 2
+def convolve_with_wrapping(array: Array, kernel: Array) -> Array:
+    assert array.ndim == kernel.ndim
+    pad_sizes = np.asarray(kernel.shape) // 2
 
     padded_shape = tuple(
         ax + pad_size * 2 for ax, pad_size in zip(array.shape, pad_sizes)
@@ -42,7 +42,7 @@ def convolve_with_wrapping(array: Array, conv_array: Array) -> Array:
         padded_array.at[slicer1_to].set(padded_array[slicer1_from])
         padded_array.at[slicer2_to].set(padded_array[slicer2_from])
 
-    convolved_padded = convolve(padded_array, conv_array, mode="same")
+    convolved_padded = convolve(padded_array, kernel, mode="same")
     convolved = convolved_padded[middle_slice].astype(array.dtype)
 
     return convolved
