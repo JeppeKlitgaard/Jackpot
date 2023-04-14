@@ -155,40 +155,6 @@ def glauber_sweep(rng_key: RNGKey, state: State) -> State:
     )
 
 
-def get_cluster_linkage_factor(
-    state: State,
-    spin_magnitude: TSpin,  # Effective abs(delta_spin)
-) -> ScalarFloat:
-    """
-    Calculates the Hamiltonian Delta by only considering nearest neighbours.
-    This is much more efficient than calculating the Hamiltonian for each
-    Metropolis step.
-
-    Not that interaction coefficients are JIT compile-static and thus any
-    Hamiltonian contributions with interaction coefficients that are zero
-    are automatically discarded during JIT tree-shaking.
-
-    Introduction of if statements to do manual tree-shaking would at best
-    slow down tracing process and at worst lead to slower runtimes.
-    """
-    link_factor: ScalarFloat = 0.0
-
-    spin_magnitude_sq = jnp.square(spin_magnitude)
-
-    # J - bilinear exchange energy (nearest neighbour)
-    link_factor += 2 * state.env.interaction_bilinear * spin_magnitude.sum()
-
-    # K - Calculate biquadratic exchange energy (nearest neighbour)
-    link_factor += 2 * state.env.interaction_biquadratic * spin_magnitude_sq.sum()
-
-    # L - Calculate bicubic exchange energy (nearest neighbour)
-    link_factor += (
-        state.env.interaction_bicubic * (spin_magnitude_sq * spin_magnitude).sum()
-    )
-
-    return link_factor
-
-
 # @eqx.filter_jit
 # def wolff_sweep(rng_key: RNGKey, state: State) -> State:
 #     spins = state.spins
