@@ -1,4 +1,6 @@
-from typing import Self
+from __future__ import annotations
+
+from typing import Any, Self
 
 import equinox as eqx
 import jax.numpy as jnp
@@ -61,7 +63,7 @@ class Environment(EnsamblableModule):
 
     def __post_init__(
         self,
-    ):
+    ) -> None:
         # Validate
         if self.bc_mode == "constant" and self.bc_mode_value is None:
             raise ValueError(
@@ -222,7 +224,7 @@ class State(EnsamblableModule):
 
         keys = random.split(rng_key, num=steps)
 
-        evolver = None
+        evolver: Any = None
         match self.env.algorithm:
             case Algorithm.METROPOLIS_HASTINGS:
                 evolver = metropolis_hastings_step
@@ -268,7 +270,7 @@ class State(EnsamblableModule):
 
         keys = random.split(rng_key, num=sweeps)
 
-        evolver = None
+        evolver: Any = None
         match self.env.algorithm:
             case Algorithm.METROPOLIS_HASTINGS:
                 evolver = metropolis_hastings_sweep
@@ -318,7 +320,7 @@ class State(EnsamblableModule):
     @staticmethod
     @eqx.filter_jit
     def _get_single_measurements(
-        state: Self, rng_key: RNGKey, sweeps: int = 1
+        state: State, rng_key: RNGKey, sweeps: int = 1
     ) -> tuple[Array, Array, Array]:
         """
         Transformable function that returns a single set of physical
