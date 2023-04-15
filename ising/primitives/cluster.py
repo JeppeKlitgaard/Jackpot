@@ -44,7 +44,9 @@ def get_cluster_linkage_factors(
         (spins**2) * neighbours + spins * (neighbours**2)
     )
 
-    link_factors *= -2.0
+    # Note: Here we have another factor of 2 compared to most papers
+    # This is again due to using ±0.5 for spins rather than ±1
+    link_factors *= -4.0
     link_factors *= state.env.beta
 
     # In case we're in a high spin system we need to nuke the ones that are
