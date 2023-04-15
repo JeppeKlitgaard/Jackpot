@@ -20,6 +20,7 @@ jaxtyping = "^0.2.14"
 einops = "^0.6.0"
 pandas = "^2.0.0"
 seaborn = "^0.12.2"
+papermill = "^2.4.0"
 pydantic = {extras = ["dotenv"], version = "^1.10.7"}
 
 [tool.poetry.group.dev.dependencies]
