@@ -74,7 +74,7 @@ class Environment(EnsamblableModule):
         ]
 
         has_external_interactions = any(
-            self.interaction_external_field, self.interaction_anisotropy
+            [self.interaction_external_field, self.interaction_anisotropy]
         )
 
         if (
@@ -131,8 +131,8 @@ class Measurements(EnsamblableModule):
     """
 
     steps: ScalarInt
+    sweeps: ScalarInt
     state_id: ScalarInt
-    spins_shape: TShape
 
     energy: Float[Array, "a"]
     magnetisation_density: Float[Array, "a"]
@@ -140,10 +140,6 @@ class Measurements(EnsamblableModule):
     @property
     def vectorisation_shape(self) -> TShape:
         return self.energy.shape[:-1]
-
-    @property
-    def sweeps(self) -> float:
-        return self.steps / np.prod(self.spins_shape)
 
 
 class State(EnsamblableModule):
@@ -158,6 +154,7 @@ class State(EnsamblableModule):
 
     id_: int
     steps: int = 0
+    sweeps: int = 0
 
     @property
     def shape(self) -> TShape:
@@ -166,10 +163,6 @@ class State(EnsamblableModule):
     @property
     def vectorisation_shape(self) -> TShape:
         return self.spins.shape[: -self.dim]
-
-    @property
-    def sweeps(self) -> float:
-        return self.steps / self.spins.size
 
     @classmethod
     @eqx.filter_jit
@@ -315,6 +308,10 @@ class State(EnsamblableModule):
 
         self = lax.fori_loop(0, sweeps, body_fun, self)
 
+        # Update sweeps
+        where = lambda s: s.sweeps
+        self = eqx.tree_at(where, self, self.sweeps + sweeps)
+
         return self
 
     @eqx.filter_jit
@@ -335,7 +332,7 @@ class State(EnsamblableModule):
     @eqx.filter_jit
     def _get_single_measurements(
         state: State, rng_key: RNGKey, sweeps: int = 1
-    ) -> tuple[Array, Array, Array]:
+    ) -> tuple[Array, Array, Array, Array]:
         """
         Transformable function that returns a single set of physical
         measurements on the system.
@@ -346,6 +343,7 @@ class State(EnsamblableModule):
 
         return (
             state.steps,
+            state.sweeps,
             energy,
             magnetisation_density,
         )
@@ -368,15 +366,18 @@ class State(EnsamblableModule):
         measurer = eqx.filter_vmap(in_axes=(None, 0, None))(
             self._get_single_measurements
         )
-        measurement_steps, energies, magnetisation_densities = measurer(
-            self, keys, sweeps
-        )
+        (
+            measurement_steps,
+            measurement_sweeps,
+            energies,
+            magnetisation_densities,
+        ) = measurer(self, keys, sweeps)
         state_ids = jnp.repeat(jnp.asarray(self.id_), num)
 
         measurements = Measurements(
             state_id=state_ids,
             steps=measurement_steps,
-            spins_shape=self.spins.shape,
+            sweeps=measurement_sweeps,
             energy=energies,
             magnetisation_density=magnetisation_densities,
         )
