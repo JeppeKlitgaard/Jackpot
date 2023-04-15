@@ -1,1 +1,3 @@
+PAPERMILL: true
+RNG_SEED: 1
 JAX_PLATORM: tpu
