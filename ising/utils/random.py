@@ -33,11 +33,10 @@ class EasyKey:
         size = np.prod(shape)
         keys = self.news(num=size)
         assert keys.ndim == 2
-        assert keys.shape[1] == 2
 
         key_shape = (
             *shape,
-            2,
+            *keys.shape[1:],
         )
         shaped_keys = keys.reshape(key_shape)
 
