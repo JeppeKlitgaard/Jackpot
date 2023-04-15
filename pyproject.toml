@@ -34,7 +34,7 @@ pytest = "^7.2.2"
 
 # Poe
 black = "^23.3.0"
-nbqa = "^1.7.0"
+nbqa = "1.6.4"  # Pin to 1.6.4 until https://github.com/nbQA-dev/nbQA/issues/811 is fixed
 [tool.poe.tasks]
 lint = [
     {cmd = "ruff . "},
