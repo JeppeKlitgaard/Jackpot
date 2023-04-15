@@ -2,8 +2,17 @@
 venv
 .venv
 
+# Jupyter
+.ipynb_checkpoints
+
 # Mypy
 .mypy_cache
+
+# Ruff
+.ruff_cache
+
+# Pytest
+.pytest_cache
 
 # Python
 __pycache__
@@ -11,3 +20,6 @@ __pycache__
 
 # VSCode
 .vscode/settings.json
+
+# Unknown
+.virtual_documents
