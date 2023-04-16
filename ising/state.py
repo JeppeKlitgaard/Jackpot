@@ -4,7 +4,6 @@ import warnings
 from typing import Self
 
 import equinox as eqx
-import jax.numpy as jnp
 import matplotlib as mpl
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
@@ -124,7 +123,7 @@ class Environment(EnsamblableModule):
         )
 
 
-class Measurements(EnsamblableModule):
+class Measurement(EnsamblableModule):
     """
     Represents one or more measurements of the system taken at a particular
     step for the state with the given id.
@@ -222,7 +221,7 @@ class State(EnsamblableModule):
         return cls(spins=spins, dim=spins.ndim, env=env, id_=id_)
 
     @eqx.filter_jit
-    def evolve_steps(self, steps: int, rng_key: RNGKey) -> Self:
+    def evolve_steps(self, rng_key: RNGKey, steps: int) -> Self:
         """
         Evolves the state for `steps` steps using the algorithm given in
         `state.env`.
@@ -268,7 +267,7 @@ class State(EnsamblableModule):
         return self
 
     @eqx.filter_jit
-    def evolve_sweeps(self, sweeps: int, rng_key: RNGKey) -> Self:
+    def evolve_sweeps(self, rng_key: RNGKey, sweeps: int) -> Self:
         """
         Evolves the state for `sweeps` sweeps using the algorithm given in
         `state.env`.
@@ -328,30 +327,8 @@ class State(EnsamblableModule):
         """
         return get_magnetisation_density(self)
 
-    @staticmethod
     @eqx.filter_jit
-    def _get_single_measurements(
-        state: State, rng_key: RNGKey, sweeps: int = 1
-    ) -> tuple[Array, Array, Array, Array]:
-        """
-        Transformable function that returns a single set of physical
-        measurements on the system.
-        """
-        state = state.evolve_sweeps(sweeps=sweeps, rng_key=rng_key)
-        energy = state.calculate_energy()
-        magnetisation_density = state.calculate_magnetisation_density()
-
-        return (
-            state.steps,
-            state.sweeps,
-            energy,
-            magnetisation_density,
-        )
-
-    @eqx.filter_jit
-    def measure(
-        self, *, rng_key: RNGKey, num: int = 1, sweeps: int = 1
-    ) -> Measurements:
+    def measure(self) -> Measurement:
         """
         Returns a series of physical measurements taken on the system.
 
@@ -361,26 +338,42 @@ class State(EnsamblableModule):
         The states used to derived the measurements are evolved independently
         from the same initial state.
         """
+        energy = self.calculate_energy()
+        magnetisation_density = self.calculate_magnetisation_density()
+
+        return Measurement(
+            steps=self.steps,
+            sweeps=self.sweeps,
+            state_id=self.id_,
+            energy=energy,
+            magnetisation_density=magnetisation_density,
+        )
+
+    @eqx.filter_jit
+    def evolve_and_measure_multiple(
+        self, *, rng_key: RNGKey, num: int = 1, sweeps: int = 1
+    ) -> Measurement:
+        """
+        Returns a series of physical measurements taken on the system.
+
+        `num` independent measurements are taken of the system after it has
+        been evolved for `sweeps` evolution sweeps.
+
+        The states used to derived the measurements are evolved independently
+        from the same initial state.
+        """
+
+        @eqx.filter_vmap(in_axes=(0, None, None))
+        def evolve_and_measure(
+            rng_key: RNGKey, state: State, sweeps: int
+        ) -> Measurement:
+            state = state.evolve_sweeps(sweeps=sweeps, rng_key=rng_key)
+            measurement = state.measure()
+
+            return measurement
+
         keys = random.split(rng_key, num=num)
-
-        measurer = eqx.filter_vmap(in_axes=(None, 0, None))(
-            self._get_single_measurements
-        )
-        (
-            measurement_steps,
-            measurement_sweeps,
-            energies,
-            magnetisation_densities,
-        ) = measurer(self, keys, sweeps)
-        state_ids = jnp.repeat(jnp.asarray(self.id_), num)
-
-        measurements = Measurements(
-            state_id=state_ids,
-            steps=measurement_steps,
-            sweeps=measurement_sweeps,
-            energy=energies,
-            magnetisation_density=magnetisation_densities,
-        )
+        measurements = evolve_and_measure(keys, self, sweeps)
 
         return measurements
 
