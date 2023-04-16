@@ -26,11 +26,21 @@ def set_spin(*, state: State, idx: TIndexArray, new_spin: TSpin) -> State:
     return state
 
 
-def beta_to_temp(beta: Float[Array, "*dim"]) -> Float[Array, "*dim"]:
-    reciprocal: Float[Array, "*dim"] = constants.Boltzmann * beta
+def beta_to_temp(
+    beta: Float[Array, "*dim"], human: bool = False
+) -> Float[Array, "*dim"]:
+    reciprocal: Float[Array, "*dim"] = beta
+    if not human:
+        reciprocal *= constants.Boltzmann
+
     return 1.0 / reciprocal
 
 
-def temp_to_beta(temp: Float[Array, "*dim"]) -> Float[Array, "*dim"]:
-    reciprocal: Float[Array, "*dim"] = constants.Boltzmann * temp
+def temp_to_beta(
+    temp: Float[Array, "*dim"], human: bool = False
+) -> Float[Array, "*dim"]:
+    reciprocal: Float[Array, "*dim"] = temp
+    if not human:
+        reciprocal *= constants.Boltzmann
+
     return 1.0 / reciprocal
