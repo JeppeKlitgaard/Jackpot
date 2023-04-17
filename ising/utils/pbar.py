@@ -97,21 +97,49 @@ def _make_device_calls(num: int, print_rate: int, tqdm: type[tqdm_default]):
     return device_update_pbar
 
 
-def loop_tqdm(num: int, print_rate: int = 100, num_prints: int | None = None):
-    if num_prints is not None:
-        print_rate = math.ceil(num / num_prints)
+def make_fori_loop(
+    tqdm: type[tqdm_default] = tqdm_default,
+    print_rate: int = 100,
+    num_prints: int | None = None,
+) -> Callable[..., tuple[Any, Sequence[Any]]]:
+    """
+    Returns a function that replaces `jax.lax.fori_loop`.
 
-    update_pbar = _make_device_calls(num=num, print_rate=print_rate, tqdm=tqdm_default)
+    This supports `pmap` transformations and all JAX accelerators.
 
-    def inner(func):
-        # This is body function of loop
-        def wrapper(i, val):
+    Parameters:
+        tqdm: a tqdm function. This allows the user to specify,
+            for example, tqdm.notebook.tqdm
+        print_rate: Will print every `print_rate`th scan
+        num_prints: Calculates the appropriate `print_rate` to get a total of
+            `num_prints` prints.
+    """
+
+    def fori_loop(
+        lower: int, upper: int, body_fun: Callable[[int, T], T], init_val: T
+    ) -> T:
+        nonlocal print_rate
+
+        num = upper - lower
+        assert num > 0
+
+        if num_prints is not None:
+            print_rate = math.ceil(num / num_prints)
+
+        update_pbar = _make_device_calls(num=num, print_rate=print_rate, tqdm=tqdm)
+
+        def _body_fun(i: int, val: T) -> T:
             update_pbar(step=i)
-            return func(i, val)
+            return body_fun(i, val)
 
-        return wrapper
+        return lax.fori_loop(
+            lower=lower,
+            upper=upper,
+            body_fun=_body_fun,
+            init_val=init_val,
+        )
 
-    return inner
+    return fori_loop
 
 
 def make_scan(
