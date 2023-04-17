@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Self
 import equinox as eqx
 import numpy as np
 import pandas as pd
+from jax import block_until_ready
 
 from ising.utils.tree import unensamble
 
@@ -48,6 +49,9 @@ class EnsamblableModule(eqx.Module):
 
     def transform_recipe_filter(self, key: str) -> bool:
         return True
+
+    def block_until_ready(self) -> None:
+        block_until_ready(self)
 
     @property
     def transform_recipe(self) -> list[str]:
