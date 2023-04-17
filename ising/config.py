@@ -23,6 +23,8 @@ class Config(BaseSettings):
     dimensions: int
     size: int
     total_samples: int
+    n_samples_vectorise: int
+    loop_n_temps_y: bool
 
     # thermalisation
     thermalise_steps: int
