@@ -11,7 +11,13 @@ from tqdm import tqdm as tqdm_default
 from ising.typing import T
 
 
-def _make_device_calls(num: int, print_rate: int, tqdm: type[tqdm_default]):
+def _make_device_calls(
+    num: int,
+    known_total: int,
+    print_rate: int,
+    tqdm: type[tqdm_default],
+    should_close: bool,
+):
     """
     Makes the host and device functions needed to facilitate the progress bar
     and communication.
@@ -46,17 +52,17 @@ def _make_device_calls(num: int, print_rate: int, tqdm: type[tqdm_default]):
 
         with lock:
             if pbar is None:
-                pbar = tqdm(total=1, leave=True)
+                pbar = tqdm(total=max(1, known_total), leave=True)
 
             if initial:
                 num_inits += 1
-                pbar.reset(total=num_inits * num)
+                pbar.reset(total=max(num_inits * num, known_total))
                 pbar.update(steps_taken)
 
             pbar.update(num_steps)
             steps_taken += num_steps
 
-            if close:
+            if close and should_close:
                 num_closes += 1
                 if num_closes >= num_inits:
                     pbar.close()
@@ -99,8 +105,10 @@ def _make_device_calls(num: int, print_rate: int, tqdm: type[tqdm_default]):
 
 def make_fori_loop(
     tqdm: type[tqdm_default] = tqdm_default,
+    known_total: int = 0,
     print_rate: int = 100,
     num_prints: int | None = None,
+    should_close: bool = False,
 ) -> Callable[..., tuple[Any, Sequence[Any]]]:
     """
     Returns a function that replaces `jax.lax.fori_loop`.
@@ -126,7 +134,13 @@ def make_fori_loop(
         if num_prints is not None:
             print_rate = math.ceil(num / num_prints)
 
-        update_pbar = _make_device_calls(num=num, print_rate=print_rate, tqdm=tqdm)
+        update_pbar = _make_device_calls(
+            num=num,
+            known_total=known_total,
+            print_rate=print_rate,
+            tqdm=tqdm,
+            should_close=should_close,
+        )
 
         def _body_fun(i: int, val: T) -> T:
             update_pbar(step=i)
@@ -144,8 +158,10 @@ def make_fori_loop(
 
 def make_scan(
     tqdm: type[tqdm_default] = tqdm_default,
+    known_total: int = 0,
     print_rate: int = 100,
     num_prints: int | None = None,
+    should_close: bool = False,
 ) -> Callable[..., tuple[Any, Sequence[Any]]]:
     """
     Returns a function that replaces `jax.lax.scan`.
@@ -182,7 +198,13 @@ def make_scan(
         if num_prints is not None:
             print_rate = math.ceil(num / num_prints)
 
-        update_pbar = _make_device_calls(num=num, print_rate=print_rate, tqdm=tqdm)
+        update_pbar = _make_device_calls(
+            num=num,
+            known_total=known_total,
+            print_rate=print_rate,
+            tqdm=tqdm,
+            should_close=should_close,
+        )
 
         def body_fun(carry: T, x: Any) -> tuple[T, Any]:
             assert isinstance(x, tuple)
