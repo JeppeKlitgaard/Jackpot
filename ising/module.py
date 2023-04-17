@@ -50,9 +50,6 @@ class EnsamblableModule(eqx.Module):
     def transform_recipe_filter(self, key: str) -> bool:
         return True
 
-    def block_until_ready(self) -> None:
-        block_until_ready(self)
-
     @property
     def transform_recipe(self) -> list[str]:
         """
@@ -99,3 +96,6 @@ class EnsamblableModule(eqx.Module):
 
     def to_df(self) -> pd.DataFrame:
         return pd.DataFrame.from_dict(self.to_dict())
+
+    def block_until_ready(self) -> None:
+        block_until_ready(self)
