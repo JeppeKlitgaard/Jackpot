@@ -31,6 +31,8 @@ class EasyKey:
 
     def shaped(self, shape: TShape) -> Array:
         size = np.prod(shape)
+        assert size != 0
+
         keys = self.news(num=size)
         assert keys.ndim == 2
 

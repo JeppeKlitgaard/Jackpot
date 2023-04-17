@@ -367,7 +367,7 @@ class State(EnsamblableModule):
         def evolve_and_measure(
             rng_key: RNGKey, state: State, sweeps: int
         ) -> Measurement:
-            state = state.evolve_sweeps(sweeps=sweeps, rng_key=rng_key)
+            state = state.evolve_sweeps(rng_key=rng_key, sweeps=sweeps)
             measurement = state.measure()
 
             return measurement
