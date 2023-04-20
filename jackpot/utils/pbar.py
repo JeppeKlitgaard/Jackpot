@@ -1,6 +1,6 @@
 import math
 from collections.abc import Callable, Sequence
-from threading import Lock
+from threading import RLock
 from typing import Any
 
 import numpy as np
@@ -28,7 +28,7 @@ def _make_device_calls(
     assert print_rate < num
 
     pbar: None | tqdm_default = None
-    lock = Lock()
+    lock = RLock()
 
     max_step = num - 1
     remainder = max_step % print_rate
@@ -49,10 +49,11 @@ def _make_device_calls(
         nonlocal pbar
 
         # On my system locks are generally held for ≈ 5e-5 sec
-        lock.acquire(timeout=0.1)
+        lock.acquire(timeout=0.5)
 
         if pbar is None:
             pbar = tqdm(total=max(1, known_total), leave=True)
+            pbar.set_lock(lock)
 
         if initial:
             num_inits += 1
