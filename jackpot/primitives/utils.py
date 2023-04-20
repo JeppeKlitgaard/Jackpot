@@ -31,7 +31,7 @@ def beta_to_temp(
 ) -> Float[Array, "*dim"]:
     reciprocal: Float[Array, "*dim"] = beta
     if not human:
-        reciprocal *= constants.Boltzmann
+        reciprocal = reciprocal * constants.Boltzmann
 
     return 1.0 / reciprocal
 
@@ -41,6 +41,6 @@ def temp_to_beta(
 ) -> Float[Array, "*dim"]:
     reciprocal: Float[Array, "*dim"] = temp
     if not human:
-        reciprocal *= constants.Boltzmann
+        reciprocal = reciprocal * constants.Boltzmann
 
     return 1.0 / reciprocal
