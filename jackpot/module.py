@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 from jax import block_until_ready
 
-from jackpot.utils.tree import unensamble
+from jackpot.utils.tree import flatten_ensamble, unensamble
 
 if TYPE_CHECKING:
     from jackpot.typing import TShape
@@ -47,6 +47,9 @@ class EnsamblableModule(eqx.Module):
     def unensamble(self) -> list[Self]:
         return unensamble(self, self.vectorisation_shape)
 
+    def flatten(self) -> Self:
+        return flatten_ensamble(self, self.vectorisation_shape)
+
     def transform_recipe_filter(self, key: str) -> bool:
         return True
 
@@ -72,25 +75,30 @@ class EnsamblableModule(eqx.Module):
         """
         return data_dict
 
-    def to_dict(self) -> dict[str, Any]:
-        unensambled = self.unensamble()
-
+    def to_dict(self) -> dict[str, list[Any]]:
+        """
+        Converts module to a dict of lists
+        """
         data_dict: dict[str, Any] = {}
-        for obj in unensambled:
-            for key in self.transform_recipe:
-                getter = attrgetter(key)
-                value = getter(obj)
+        size = np.prod(self.vectorisation_shape)
+        flat_self = flatten_ensamble(self, self.vectorisation_shape)
 
-                if eqx.is_array(value):
-                    if value.size == 1:
-                        # We want scalar values to be scalars, not (1,) arrays
-                        value = value.item()
-                    else:
-                        # Convert to numpy to prevent problems with df.explode
-                        # later
-                        value = np.asarray(value)
+        for key in self.transform_recipe:
+            getter = attrgetter(key)
+            value = getter(flat_self)
 
-                data_dict.setdefault(key, []).append(value)
+            if eqx.is_array(value):
+                if value.size == 1:
+                    # We want scalar values to be scalars, not (1,) arrays
+                    value = [value.item()] * size
+                else:
+                    # Convert to numpy to prevent problems with df.explode
+                    # later
+                    value = list(np.asarray(value))
+            else:
+                value = [value] * size
+
+            data_dict[key] = value
 
         return self.post_transform(data_dict)
 
