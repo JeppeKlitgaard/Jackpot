@@ -33,7 +33,6 @@ def _make_device_calls(
     max_step = num - 1
     remainder = max_step % print_rate
 
-    steps_taken = 0
     num_inits = 0  # Track how many parallel calls we get
     num_closes = 0
 
