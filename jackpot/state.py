@@ -129,9 +129,11 @@ class Measurement(EnsamblableModule):
     step for the state with the given id.
     """
 
+    state_id: ScalarInt
+    beta: Float[Array, ""]
+
     steps: ScalarInt
     sweeps: ScalarInt
-    state_id: ScalarInt
 
     energy: Float[Array, "a"]
     magnetisation_density: Float[Array, "a"]
@@ -342,9 +344,10 @@ class State(EnsamblableModule):
         magnetisation_density = self.calculate_magnetisation_density()
 
         return Measurement(
+            state_id=self.id_,
+            beta=self.env.beta,
             steps=self.steps,
             sweeps=self.sweeps,
-            state_id=self.id_,
             energy=energy,
             magnetisation_density=magnetisation_density,
         )
