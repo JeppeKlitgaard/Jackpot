@@ -7,15 +7,15 @@ import jax.numpy as jnp
 from jax import Array, lax, random
 from jaxtyping import Bool, Int, UInt
 
-from ising.algorithms.local import metropolis_hastings_accept
-from ising.primitives.cluster import get_cluster_linkage_factors
-from ising.primitives.local import get_random_point_idx
-from ising.primitives.measure import get_hamiltonian
-from ising.primitives.state import get_trial_spin
+from jackpot.algorithms.local import metropolis_hastings_accept
+from jackpot.primitives.cluster import get_cluster_linkage_factors
+from jackpot.primitives.local import get_random_point_idx
+from jackpot.primitives.measure import get_hamiltonian
+from jackpot.primitives.state import get_trial_spin
 
 if TYPE_CHECKING:
-    from ising.state import State
-    from ising.typing import RNGKey
+    from jackpot.state import State
+    from jackpot.typing import RNGKey
 
 
 class ClusterSolution(eqx.Module):

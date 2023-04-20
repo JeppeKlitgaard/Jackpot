@@ -8,7 +8,7 @@ from jax import lax
 from jax.experimental import io_callback
 from tqdm import tqdm as tqdm_default
 
-from ising.typing import T
+from jackpot.typing import T
 
 
 def _make_device_calls(

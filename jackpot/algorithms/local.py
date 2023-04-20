@@ -10,14 +10,14 @@ from jax import Array, lax, random
 from jax import ensure_compile_time_eval as compile_time
 from jaxtyping import Bool, Float, UInt
 
-from ising.primitives.local import get_random_point_idx
-from ising.primitives.measure import get_hamiltonian_delta
-from ising.primitives.state import get_trial_spin
-from ising.primitives.utils import set_spin
+from jackpot.primitives.local import get_random_point_idx
+from jackpot.primitives.measure import get_hamiltonian_delta
+from jackpot.primitives.state import get_trial_spin
+from jackpot.primitives.utils import set_spin
 
 if TYPE_CHECKING:
-    from ising.state import State
-    from ising.typing import RNGKey, TSpin
+    from jackpot.state import State
+    from jackpot.typing import RNGKey, TSpin
 
     TAcceptFunc = Callable[
         [RNGKey, Float[Array, ""], Float[Array, ""]], Bool[Array, ""]

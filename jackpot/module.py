@@ -10,10 +10,10 @@ import numpy as np
 import pandas as pd
 from jax import block_until_ready
 
-from ising.utils.tree import unensamble
+from jackpot.utils.tree import unensamble
 
 if TYPE_CHECKING:
-    from ising.typing import TShape
+    from jackpot.typing import TShape
 
 TFieldKeys = None | dict[str, "TFieldKeys"]
 

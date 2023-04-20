@@ -9,8 +9,8 @@ from jax import ensure_compile_time_eval as compile_time
 from jaxtyping import Float, Int, UInt
 
 if TYPE_CHECKING:
-    from ising.state import State
-    from ising.typing import RNGKey, TIndex, TIndexArray, TShape
+    from jackpot.state import State
+    from jackpot.typing import RNGKey, TIndex, TIndexArray, TShape
 
 
 def get_random_point_idx(rng_key: RNGKey, shape: TShape) -> TIndex:

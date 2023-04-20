@@ -8,8 +8,8 @@ from jaxtyping import Float
 from scipy import constants
 
 if TYPE_CHECKING:
-    from ising.state import State
-    from ising.typing import TIndexArray, TSpin
+    from jackpot.state import State
+    from jackpot.typing import TIndexArray, TSpin
 
 
 def set_spin(*, state: State, idx: TIndexArray, new_spin: TSpin) -> State:

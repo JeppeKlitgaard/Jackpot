@@ -2,7 +2,7 @@ from enum import StrEnum, auto
 
 from pydantic import BaseSettings
 
-from ising.types import Algorithm
+from jackpot.types import Algorithm
 
 
 class JaxPlatform(StrEnum):

@@ -1,8 +1,8 @@
 from jaxtyping import Array, Float, UInt
 
-from ising.module import EnsamblableModule
-from ising.state import State
-from ising.typing import TShape
+from jackpot.module import EnsamblableModule
+from jackpot.state import State
+from jackpot.typing import TShape
 
 
 class AutocorrelationData(EnsamblableModule):

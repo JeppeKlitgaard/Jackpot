@@ -12,7 +12,7 @@ import jax.numpy as jnp
 import numpy as np
 from jaxtyping import Array, Num
 
-from ising.utils.types import assert_concrete
+from jackpot.utils.types import assert_concrete
 
 TMissing = Literal["none", "raise", "conservative", "drop"]
 

@@ -2,7 +2,7 @@ import jax.numpy as jnp
 import numpy as np
 from jax import Array, random
 
-from ising.typing import RNGKey, TShape
+from jackpot.typing import RNGKey, TShape
 
 
 class EasyKey:

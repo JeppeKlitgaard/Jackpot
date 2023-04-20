@@ -8,7 +8,7 @@ import numpy as np
 from jaxtyping import PyTree
 
 if TYPE_CHECKING:
-    from ising.typing import T, TShape
+    from jackpot.typing import T, TShape
 
 
 def unensamble(tree: PyTree[T], shape: TShape) -> list[T]:

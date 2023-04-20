@@ -7,12 +7,12 @@ import numpy as np
 from jax import Array
 from scipy.ndimage import generate_binary_structure
 
-from ising.primitives.convolve import convolve_with_wrapping
-from ising.primitives.local import get_nearest_neighbours
+from jackpot.primitives.convolve import convolve_with_wrapping
+from jackpot.primitives.local import get_nearest_neighbours
 
 if TYPE_CHECKING:
-    from ising.state import State
-    from ising.typing import ScalarFloat, TSpin
+    from jackpot.state import State
+    from jackpot.typing import ScalarFloat, TSpin
 
 
 def get_magnetisation_density(state: State) -> ScalarFloat:

@@ -8,8 +8,8 @@ from jax import ensure_compile_time_eval as compile_time
 from jax import lax, random
 
 if TYPE_CHECKING:
-    from ising.state import State
-    from ising.typing import RNGKey, TSpin
+    from jackpot.state import State
+    from jackpot.typing import RNGKey, TSpin
 
 
 def get_trial_spin(*, rng_key: RNGKey, state: State, current_spin: float) -> TSpin:

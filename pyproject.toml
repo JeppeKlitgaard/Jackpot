@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "isingmodel"
+name = "jackpot"
 version = "0.1.0"
-description = "A pure python implementation of the Ising Model using the Metropolis algorithm"
+description = "JAX implementation of a highly generalised Potts Model"
 authors = ["Jeppe Klitgaard <hi@jeppe.science>"]
 license = "MIT"
 

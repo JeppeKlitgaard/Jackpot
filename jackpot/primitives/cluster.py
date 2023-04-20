@@ -7,7 +7,7 @@ from jax import Array
 from jaxtyping import Float
 
 if TYPE_CHECKING:
-    from ising.state import State
+    from jackpot.state import State
 
 
 def get_cluster_linkage_factors(

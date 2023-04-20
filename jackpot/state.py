@@ -13,17 +13,17 @@ from jax.random import KeyArray
 from jaxtyping import Float
 from matplotlib.figure import Figure
 
-from ising.algorithms.cluster import wolff_sweep
-from ising.algorithms.local import (
+from jackpot.algorithms.cluster import wolff_sweep
+from jackpot.algorithms.local import (
     glauber_step,
     glauber_sweep,
     metropolis_hastings_step,
     metropolis_hastings_sweep,
 )
-from ising.module import EnsamblableModule
-from ising.primitives.measure import get_hamiltonian, get_magnetisation_density
-from ising.types import Algorithm
-from ising.typing import (
+from jackpot.module import EnsamblableModule
+from jackpot.primitives.measure import get_hamiltonian, get_magnetisation_density
+from jackpot.types import Algorithm
+from jackpot.typing import (
     RNGKey,
     ScalarInt,
     TEvolveAlgorithm,
