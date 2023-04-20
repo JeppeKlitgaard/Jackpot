@@ -23,3 +23,7 @@ __pycache__
 
 # Unknown
 .virtual_documents
+
+# Experiments
+parameters/
+experiments/
