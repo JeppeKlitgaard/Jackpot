@@ -16,6 +16,7 @@ class Config(BaseSettings):
     jax_platform: JaxPlatform
     do_profiling: bool
     enable_64_bit: bool
+    do_autocorrelation: bool
 
     # experiment
     rng_seed: int | None
