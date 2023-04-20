@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.testing import assert_array_equal
 
-from ising.primitives.convolve import convolve_with_wrapping
+from jackpot.primitives.convolve import convolve_with_wrapping
 
 
 def test_convolve_with_wrapping():
