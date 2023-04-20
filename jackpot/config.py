@@ -17,6 +17,7 @@ class Config(BaseSettings):
     do_profiling: bool
     enable_64_bit: bool
     do_autocorrelation: bool
+    plot_states: bool
 
     # experiment
     rng_seed: int | None
