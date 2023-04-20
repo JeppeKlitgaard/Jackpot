@@ -26,10 +26,6 @@ class Config(BaseSettings):
     n_samples_vectorise: int
     loop_n_temps_y: bool
 
-    # thermalisation
-    thermalise_steps: int
-    thermalise_sweeps_per_step: int
-
     # environment
     interaction_bilinear: float
     interaction_biquadratic: float
@@ -46,3 +42,16 @@ class Config(BaseSettings):
     temp_min: float
     temp_max: float
     n_temps: int
+
+    # thermalisation
+    thermalise_steps: int
+    thermalise_sweeps_per_step: int
+
+    # autocorrelation
+    autocorrelation_steps: int
+    autocorrelation_sweeps_per_step: int
+
+    # measure
+    measure_equilibrium_steps: int
+    measure_equilibrium_num: int
+    measure_equilibrium_sweeps_per_step: int
