@@ -45,27 +45,29 @@ def _make_device_calls(
 
         Since we support parallel environments we need to use a lock.
         """
-        nonlocal steps_taken
         nonlocal num_inits
         nonlocal num_closes
         nonlocal pbar
 
-        with lock:
-            if pbar is None:
-                pbar = tqdm(total=max(1, known_total), leave=True)
+        # On my system locks are generally held for ≈ 5e-5 sec
+        lock.acquire(timeout=0.1)
 
-            if initial:
-                num_inits += 1
-                pbar.reset(total=max(num_inits * num, known_total))
-                pbar.update(steps_taken)
+        if pbar is None:
+            pbar = tqdm(total=max(1, known_total), leave=True)
 
-            pbar.update(num_steps)
-            steps_taken += num_steps
+        if initial:
+            num_inits += 1
+            new_total = num_inits * num_steps
+            pbar.total = known_total or new_total
 
-            if close and should_close:
-                num_closes += 1
-                if num_closes >= num_inits:
-                    pbar.close()
+        pbar.update(num_steps)
+
+        if close and should_close:
+            num_closes += 1
+            if num_closes >= num_inits:
+                pbar.close()
+
+        lock.release()
 
     def device_update_pbar(*, step: int) -> Callable[..., None]:
         """
