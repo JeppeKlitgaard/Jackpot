@@ -5,17 +5,21 @@ from typing import TYPE_CHECKING, Self
 import equinox as eqx
 import jax.numpy as jnp
 from jax import Array, lax, random
-from jaxtyping import Bool, Int, UInt
+from jaxtyping import Bool, UInt
 
-from jackpot.algorithms.local import metropolis_hastings_accept
-from jackpot.primitives.cluster import get_cluster_linkage_factors
-from jackpot.primitives.local import get_random_point_idx
-from jackpot.primitives.measure import get_hamiltonian
-from jackpot.primitives.state import get_trial_spin
+from jackpot.algorithms.base import Algorithm
 
 if TYPE_CHECKING:
     from jackpot.state import State
     from jackpot.typing import RNGKey
+
+
+class ClusterAlgorithm(Algorithm):
+    """
+    Base class implementation of a cluster algorithm.
+    """
+
+    probabilistic_cluster_accept: bool = eqx.static_field()
 
 
 class ClusterSolution(eqx.Module):
@@ -43,6 +47,10 @@ class ClusterSolution(eqx.Module):
     @classmethod
     @eqx.filter_jit
     def clusterise_state(cls, rng_key: RNGKey, state: State) -> Self:
+        """
+        This runs our clustering algorithm (not cluster algorithm) on a state
+        and returns a ClusterSolution.
+        """
         spins = state.spins
         shape = spins.shape
 
@@ -53,7 +61,7 @@ class ClusterSolution(eqx.Module):
             neighbours = neighbours.at[i].set(jnp.roll(spins, shift=-1, axis=i))
 
         # Compute a link factor for each neighbour site
-        link_factors = get_cluster_linkage_factors(
+        link_factors = state.model.get_cluster_linkage_factors(
             state=state, spins=spins, neighbours=neighbours
         )
 
@@ -191,122 +199,4 @@ class ClusterSelection(eqx.Module):
             cluster_solution=solution,
             is_done=is_done,
             steps=selector.steps + 1,
-        )
-
-
-@eqx.filter_jit
-def wolff_sweep(rng_key: RNGKey, state: State) -> State:
-    point_key, spin_key, accept_key = random.split(key=rng_key, num=3)
-
-    # First step is solving for the clusters
-    solution = ClusterSolution.clusterise_state(rng_key=rng_key, state=state)
-
-    # Next we find a cluster and select it
-    seed_idx = get_random_point_idx(rng_key=point_key, shape=state.shape)
-    current_spin = state.spins[tuple(seed_idx)]
-
-    selection = ClusterSelection.from_seed_idx(
-        cluster_solution=solution, seed_idx=seed_idx
-    )
-
-    # Set the cluster to our a new spin on our trial state
-    trial_spin = get_trial_spin(
-        rng_key=spin_key, state=state, current_spin=current_spin
-    )
-    trial_spins = jnp.where(selection.selected, trial_spin, state.spins)
-
-    where = lambda s: s.spins
-    trial_state = eqx.tree_at(where, state, trial_spins)
-
-    # Update number of steps taken
-    new_steps = selection.selected.sum()
-    where = lambda s: s.steps
-    trial_state = eqx.tree_at(where, trial_state, trial_state.steps + new_steps)
-
-    # Probabilistically select trial state
-    # This is a standard technique when using external field or anisotropy
-    # interactions.
-    # It essentially adds a Metropolis-Hastings like transition probability
-    # to the cluster update, which enables these dynamics in a way that
-    # cannot be accomplished using link dynamics.
-    if state.env.probabilistic_cluster_accept:
-        delta_H = get_hamiltonian(trial_state) - get_hamiltonian(state)
-        accept = metropolis_hastings_accept(
-            rng_key=accept_key, beta=state.env.beta, delta=delta_H
-        )
-
-        new_state = lax.cond(accept, lambda: trial_state, lambda: state)
-
-    else:
-        new_state = trial_state
-
-    return new_state
-
-
-class ClusterSolverState(eqx.Module):
-    """
-    A previous attempt at an iterative cluster grower.
-
-    There are a few bugs left, but the main principle is working.
-    Since this does selection and clustering in the same loop, this
-    algorithm is inefficient for evolvers that flip more than a single
-    cluster (Swendsen-Wang), but work decently for single-cluster methods
-    (Wolff).
-
-    It uses a convolution behind the scenes to expand the selected cluster.
-    """
-
-    do_not_visit: Bool[Array, ...]
-    updated: Bool[Array, ...]
-
-    neighbour_kernel: Int[Array, ...]
-
-    rng_key: RNGKey
-    threshold: float
-
-    steps: int
-    is_done: bool
-
-    @staticmethod
-    @eqx.filter_jit
-    def should_continue(cluster_state: Self) -> bool:
-        return cluster_state.is_done == False  # noqa: E712
-
-    @staticmethod
-    @eqx.filter_jit
-    def evolve(cluster_state: Self) -> Self:
-        cs = cluster_state
-        new_key, randoms_key = random.split(cluster_state.rng_key)
-
-        # Find neighbours
-        neighbour_finder = cs.updated.astype(int)
-        neighbour_finder = convolve_with_wrapping(neighbour_finder, cs.neighbour_kernel)
-        neighbours = jnp.clip(neighbour_finder, 0, 2).astype(bool)
-
-        # Find candidates
-        candidates = neighbours & ~cs.do_not_visit & ~cs.updated
-
-        # Generate random numbers for probabilistic addition to cluster
-        randoms = random.uniform(key=randoms_key, shape=candidates.shape)
-        random_accept = cs.threshold > randoms
-
-        # Find new cluster members
-        new_cluster_members = candidates & random_accept
-
-        # Reflect updates on other arrays
-        updated = cs.updated | new_cluster_members
-
-        # We have visited all states this time around, thus
-        # no unvisited states if we didn't add new members
-        # in which case we are done
-        is_done = new_cluster_members.sum() == 0
-
-        return ClusterSolverState(
-            do_not_visit=cs.do_not_visit,
-            updated=updated,
-            neighbour_kernel=cs.neighbour_kernel,
-            rng_key=new_key,
-            threshold=cs.threshold,
-            steps=cs.steps + new_cluster_members.sum(),
-            is_done=is_done,
         )

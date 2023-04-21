@@ -12,9 +12,16 @@ if TYPE_CHECKING:
     from jackpot.typing import RNGKey, TSpin
 
 
+# TODO: Move into model class.
 def get_trial_spin(*, rng_key: RNGKey, state: State, current_spin: float) -> TSpin:
+    """
+    Returns a new spin that is guaranteed to be different to `current_spin`.
+    This is achieved in an efficient and deterministic manner using the `lax.switch`
+    primitive with switch branches being determined and lowered at
+    compile time.
+    """
     with compile_time():
-        spin_states = state.env.spin_states
+        spin_states = state.model.spin_states
         spin_states_arr = np.asarray(spin_states)
 
         current_spin_idx = jnp.where(

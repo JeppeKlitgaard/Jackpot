@@ -14,6 +14,9 @@ if TYPE_CHECKING:
 
 
 def get_random_point_idx(rng_key: RNGKey, shape: TShape) -> TIndex:
+    """
+    Returns the index of a random point on the lattice.
+    """
     with compile_time():
         dim = len(shape)
 
@@ -31,7 +34,7 @@ def apply_boundary_conditions(
     """
     Applies boundary conditions to an array of indices.
 
-    Assumes square array.
+    Assumes hypercubic lattice.
 
     This resolves the indices using the boundary condition such that the
     returned indices are ∈ ℕ ∪ {0}.
@@ -66,7 +69,7 @@ def get_nearest_neighbour_idxs(
     return nn_idxs_arr
 
 
-def get_spins(*, state: State, idxs: UInt[Array, "a b"]) -> Float[Array, a]:
+def get_spins(*, state: State, idxs: UInt[Array, "a b"]) -> Float[Array, "a"]:
     """
     Look up a list of spins by idxs and return them.
 
@@ -87,6 +90,9 @@ def get_nearest_neighbours(
     state: State,
     idx: Array,
 ) -> Array:
+    """
+    Returns the nearest neighbour spins.
+    """
     idxs = get_nearest_neighbour_idxs(state=state, idx=idx)
     neighbours = get_spins(state=state, idxs=idxs)
 

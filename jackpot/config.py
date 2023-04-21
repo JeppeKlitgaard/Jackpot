@@ -2,7 +2,7 @@ from enum import StrEnum, auto
 
 from pydantic import BaseSettings
 
-from jackpot.types import Algorithm
+from jackpot.algorithms import AlgorithmChoice
 
 
 class JaxPlatform(StrEnum):
@@ -37,7 +37,7 @@ class Config(BaseSettings):
     nuclear_magnetic_moment: float
 
     # environment config
-    algorithm: Algorithm
+    algorithm: AlgorithmChoice
     probabilistic_cluster_accept: bool
 
     # temperatures

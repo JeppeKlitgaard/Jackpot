@@ -1,3 +1,6 @@
+"""
+Subclassing of `equinox.Module`
+"""
 from __future__ import annotations
 
 from dataclasses import fields as dc_fields
@@ -19,6 +22,9 @@ TFieldKeys = None | dict[str, "TFieldKeys"]
 
 
 def _get_keys(obj: Any) -> TFieldKeys:
+    """
+    Get keys of a dataclass object or return None.
+    """
     if not is_dataclass(obj):
         return None
 
@@ -33,24 +39,43 @@ def _get_keys(obj: Any) -> TFieldKeys:
 
 class EnsamblableModule(eqx.Module):
     """
-    Equinox modules that has additional support for ensambling.
+    Equinox modules that has additional support for ensambling and other
+    neat tricks.
     """
 
     @property
-    def vectorisation_shape(self) -> TShape:
+    def transformation_shape(self) -> TShape:
         raise NotImplementedError("This should be overridden!")
 
     @property
-    def is_vectorised(self) -> bool:
-        return bool(self.vectorisation_shape)
+    def is_transformed(self) -> bool:
+        """
+        Returns true if the module has been transformed using
+        `vmap`, `pmap`, or `lax.map` primitives.
+        """
+        return bool(self.transformation_shape)
 
     def unensamble(self) -> list[Self]:
-        return unensamble(self, self.vectorisation_shape)
+        """
+        Flattens the PyTree and converts it to a list of the untransformed
+        module.
+        """
+        return unensamble(self, self.transformation_shape)
 
     def flatten(self) -> Self:
-        return flatten_ensamble(self, self.vectorisation_shape)
+        """
+        Flattens the PyTree to be a PyTree of the untransformed variety
+        except with all ensamble members being stored on the leading axis
+        of leaves.
+        """
+        return flatten_ensamble(self, self.transformation_shape)
 
     def transform_recipe_filter(self, key: str) -> bool:
+        """
+        Can be subclassed to filter out keys from transform recipe.
+
+        Must return boolean.
+        """
         return True
 
     @property
@@ -58,6 +83,10 @@ class EnsamblableModule(eqx.Module):
         """
         A list of attributes (which may contain `.`s) to use when
         transforming unensambled object to a Python or Pandas object(s).
+
+        A transform recipe simply returns a flattened list of keys
+        that exist on the module, taking into consideration modules
+        present in the PyTree as attributes.
         """
         keys = _get_keys(self)
 
@@ -80,8 +109,8 @@ class EnsamblableModule(eqx.Module):
         Converts module to a dict of lists
         """
         data_dict: dict[str, Any] = {}
-        size = np.prod(self.vectorisation_shape)
-        flat_self = flatten_ensamble(self, self.vectorisation_shape)
+        size = np.prod(self.transformation_shape)
+        flat_self = flatten_ensamble(self, self.transformation_shape)
 
         for key in self.transform_recipe:
             getter = attrgetter(key)
@@ -103,7 +132,15 @@ class EnsamblableModule(eqx.Module):
         return self.post_transform(data_dict)
 
     def to_df(self) -> pd.DataFrame:
+        """
+        Converts the PyTree to a Pandas DataFrame using the transformation
+        recipe stored in `self.transform_recipe`.
+        """
         return pd.DataFrame.from_dict(self.to_dict())
 
     def block_until_ready(self) -> None:
+        """
+        Blocks until all data in the PyTree has been computed on accelerator
+        devices and is ready to be used.
+        """
         block_until_ready(self)
