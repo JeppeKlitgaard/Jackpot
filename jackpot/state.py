@@ -49,6 +49,13 @@ class State(EnsamblableModule):
         return self.spins.shape[-self.dim :]
 
     @property
+    def size(self) -> int:
+        """
+        The number of lattice sites.
+        """
+        return np.prod(self.shape)
+
+    @property
     def dim(self) -> int:
         """
         The dimensionality of lattice.
