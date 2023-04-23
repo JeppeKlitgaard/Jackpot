@@ -10,6 +10,8 @@ import numpy as np
 from jax import Array, lax, random
 from jax.random import KeyArray
 from jaxtyping import Float
+import jax.numpy as jnp
+
 from matplotlib.figure import Figure
 
 from jackpot.algorithms.base import Algorithm
@@ -67,7 +69,7 @@ class State(EnsamblableModule):
         """
         The shape of the ensamble due to JAX transformations.
         """
-        return self.beta.shape
+        return jnp.asarray(self.beta).shape
 
     @classmethod
     @eqx.filter_jit
@@ -271,7 +273,7 @@ class State(EnsamblableModule):
 
         return measurements
 
-    def plot(self) -> Figure:
+    def plot(self, title: str | None =None) -> Figure:
         """
         Plots the state assuming it is in 2D or 3D.
         """
@@ -313,13 +315,15 @@ class State(EnsamblableModule):
             for i, spin_state in enumerate(self.model.spin_states)
         ]
 
-        plt.legend(handles=patches, bbox_to_anchor=(1.01, 1), loc=2)
+        plt.legend(handles=patches, bbox_to_anchor=(1.01, 1), loc=2, framealpha=0.2)
+
 
         info_lines = (
             f"$S = {self.spins.sum():.1f}$",
             f"$β = {self.beta:.3f}$",
         )
         info_line = "\n".join(info_lines)
-        plt.title(f"Spin states\n{info_line}")
+        title = title or "Spin states"
+        plt.title(f"{title}\n{info_line}")
 
         return fig

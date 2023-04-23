@@ -18,4 +18,10 @@ def show(arr, title):
         mpatches.Patch(color=colors[i], label=f"{values[i]}")
         for i in range(len(values))
     ]
-    plt.legend(handles=patches, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.0)
+    plt.legend(
+        handles=patches,
+        bbox_to_anchor=(1.05, 1),
+        loc=2,
+        borderaxespad=0.0,
+        framealpha=0.2,
+    )

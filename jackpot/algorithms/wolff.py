@@ -59,6 +59,8 @@ class WolffAlgorithm(ClusterAlgorithm):
         )
         trial_spins = jnp.where(selection.selected, trial_spin, state.spins)
 
+        # Note: we cannot mutate PyTree, so we use Equinox convenience method
+        # to produce a new tree with the changes we want
         where = lambda s: s.spins
         trial_state = eqx.tree_at(where, state, trial_spins)
 

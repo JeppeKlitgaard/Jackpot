@@ -42,7 +42,7 @@ class ClusterSolution(eqx.Module):
     """
 
     rng_key: RNGKey
-    links: Bool[Array, "ndim, *dims"]
+    links: Bool[Array, "ndim *dims"]
 
     @classmethod
     @eqx.filter_jit
@@ -130,7 +130,7 @@ class ClusterSelection(eqx.Module):
     @classmethod
     @eqx.filter_jit
     def from_seed_idx(
-        cls, cluster_solution: ClusterSolution, seed_idx: UInt[Array, a]
+        cls, cluster_solution: ClusterSolution, seed_idx: UInt[Array, "a"]
     ) -> Self:
         """
         Find a full selection from a single seed site.
