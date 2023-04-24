@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Self
 
 import equinox as eqx
+import jax.numpy as jnp
 import matplotlib as mpl
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
@@ -10,8 +11,6 @@ import numpy as np
 from jax import Array, lax, random
 from jax.random import KeyArray
 from jaxtyping import Float
-import jax.numpy as jnp
-
 from matplotlib.figure import Figure
 
 from jackpot.algorithms.base import Algorithm
@@ -273,7 +272,7 @@ class State(EnsamblableModule):
 
         return measurements
 
-    def plot(self, title: str | None =None) -> Figure:
+    def plot(self, title: str | None = None) -> Figure:
         """
         Plots the state assuming it is in 2D or 3D.
         """
@@ -289,7 +288,9 @@ class State(EnsamblableModule):
         match self.dim:
             case 2:
                 ax = fig.add_subplot()
-                im = ax.imshow(self.spins, norm=norm)
+                im = ax.imshow(
+                    self.spins, norm=norm, interpolation=None, rasterized=True
+                )
 
             case 3:
                 ax = fig.add_subplot(111, projection="3d")
@@ -316,7 +317,6 @@ class State(EnsamblableModule):
         ]
 
         plt.legend(handles=patches, bbox_to_anchor=(1.01, 1), loc=2, framealpha=0.2)
-
 
         info_lines = (
             f"$S = {self.spins.sum():.1f}$",
