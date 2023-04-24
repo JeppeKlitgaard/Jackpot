@@ -25,5 +25,7 @@ __pycache__
 .virtual_documents
 
 # Experiments
-parameters/
-experiments/
+# parameters/
+# experiments/
+*.log
+
