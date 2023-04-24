@@ -1,0 +1,5 @@
+ALGORITHM: metropolis_hastings
+DO_AUTOCORRELATION: true
+DO_MEASURE: false
+JAX_PLATFORM: cpu
+SIZE: 512
