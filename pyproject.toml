@@ -11,17 +11,18 @@ numpy = "^1.24.2"
 matplotlib = "^3.7.1"
 scipy = "^1.10.1"
 ipywidgets = "^8.0.6"
-jax = {extras = ["cpu"], version = "^0.4.8"}
+jax = { extras = ["cpu"], version = "^0.4.8" }
 tqdm = "^4.65.0"
 uncertainties = "^3.1.7"
 plotly = "^5.14.0"
-equinox = "^0.10.2"
+# equinox = "^0.10.2"
+equinox = { git = "https://github.com/patrick-kidger/equinox.git", branch = "dev" }
 jaxtyping = "^0.2.14"
 einops = "^0.6.0"
 pandas = "^2.0.0"
 seaborn = "^0.12.2"
 papermill = "^2.4.0"
-pydantic = {extras = ["dotenv"], version = "^1.10.7"}
+pydantic = { extras = ["dotenv"], version = "^1.10.7" }
 pyarrow = "^11.0.0"
 numpyencoder = "^0.3.0"
 lmfit = "^1.2.0"
@@ -39,31 +40,22 @@ pytest = "^7.2.2"
 
 # Poe
 black = "^23.3.0"
-nbqa = "1.6.4"  # Pin to 1.6.4 until https://github.com/nbQA-dev/nbQA/issues/811 is fixed
+nbqa = "1.6.4"    # Pin to 1.6.4 until https://github.com/nbQA-dev/nbQA/issues/811 is fixed
 [tool.poe.tasks]
-lint = [
-    {cmd = "ruff . "},
-    {cmd = "nbqa ruff ."},
-]
+lint = [{ cmd = "ruff . " }, { cmd = "nbqa ruff ." }]
 
-check = {cmd = "mypy", help = "Run mypy"}
-test = {cmd = "pytest", help = "Run pytest"}
+check = { cmd = "mypy", help = "Run mypy" }
+test = { cmd = "pytest", help = "Run pytest" }
 ruff-fix = [
-    {cmd = "black ."},
-    {cmd = "ruff --fix ."},
-    {cmd = "nbqa ruff . --fix"},
-    {cmd = "nbqa black ."},
+    { cmd = "black ." },
+    { cmd = "ruff --fix ." },
+    { cmd = "nbqa ruff . --fix" },
+    { cmd = "nbqa black ." },
 ]
 
-dev = [
-    "lint",
-    "check",
-    "test",
-]
+dev = ["lint", "check", "test"]
 
-fix = [
-    "ruff-fix",
-]
+fix = ["ruff-fix"]
 
 # Mypy
 [tool.mypy]
@@ -90,17 +82,12 @@ line-length = 88
 select = [
     "E",
     "F",
-    "UP",  # pyupgrade
-    "NPY001",  # numpy-deprecated-type-alias
-    "I",  # isort
+    "UP",     # pyupgrade
+    "NPY001", # numpy-deprecated-type-alias
+    "I",      # isort
 ]
 
-ignore = [
-    "E731",
-    "F821",
-    "F722",
-    "UP037",
-]
+ignore = ["E731", "F821", "F722", "UP037"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

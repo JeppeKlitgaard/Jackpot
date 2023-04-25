@@ -520,15 +520,19 @@ description = "PyTorch-like neural networks in JAX"
 category = "main"
 optional = false
 python-versions = "~=3.8"
-files = [
-    {file = "equinox-0.10.2-py3-none-any.whl", hash = "sha256:74cd4334bbadcd14f53144151f9d2f0ce9be9b82d2ab0f9947ee19ca2d553b79"},
-    {file = "equinox-0.10.2.tar.gz", hash = "sha256:7502cc42bda248b100b2df018d62b67732bf0f430bb1212b8187fb2074294733"},
-]
+files = []
+develop = false
 
 [package.dependencies]
 jax = ">=0.4.4"
 jaxtyping = ">=0.2.14"
-typing-extensions = ">=4.5.0"
+typing_extensions = ">=4.5.0"
+
+[package.source]
+type = "git"
+url = "https://github.com/patrick-kidger/equinox.git"
+reference = "dev"
+resolved_reference = "de6b005c5db7091bb5ec0f17019df6de9e6dbced"
 
 [[package]]
 name = "executing"
@@ -2461,4 +2465,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "a28a575f6ccca1dfc7b59fd4811ba682781700e55f15ad734c7b2ca0045001d8"
+content-hash = "26005dc3d6e697e76dbece4b9f020ee7eeef9e754bd680734e3950a6c05abd73"
