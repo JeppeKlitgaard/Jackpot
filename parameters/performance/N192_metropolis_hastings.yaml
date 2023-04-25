@@ -1,4 +1,5 @@
 ALGORITHM: metropolis_hastings
+CHECK_THERMALISED: false
 DO_AUTOCORRELATION: false
 DO_MEASURE: false
 JAX_PLATFORM: cpu

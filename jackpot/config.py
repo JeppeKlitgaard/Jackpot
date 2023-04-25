@@ -19,6 +19,7 @@ class Config(BaseSettings):
     do_autocorrelation: bool
     do_measure: bool
     plot_states: bool
+    check_thermalised: bool
 
     # experiment
     rng_seed: int | None
