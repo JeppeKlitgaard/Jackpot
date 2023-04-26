@@ -1,0 +1,20 @@
+{
+    "DEVICE_COUNT": 8,
+    "N_SAMPLES_LOOP": 1,
+    "N_SAMPLES_PER_TEMP": 4,
+    "N_TEMPS_X": 8,
+    "N_TEMPS_Y": 8,
+    "TOTAL_SWEEPS": 640000,
+    "VECTORISATION_SHAPE": [
+        1,
+        8,
+        8,
+        4
+    ],
+    "VECTORISED_COUNT": 256,
+    "flip_rate": 51.61350786644167,
+    "measurement_time": 1034.880196094513,
+    "rng_seed": 1,
+    "thermalise_compile_time": 6.436395645141602,
+    "thermalise_run_time": 19.61754608154297
+}
