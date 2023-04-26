@@ -8,6 +8,7 @@ function run {
 run "autocorrelation/N16_wolff"
 run "autocorrelation/N16_metropolis_hastings"
 run "autocorrelation/N32_wolff"
+run "autocorrelation/N32_swendsen_wang"
 run "autocorrelation/N32_metropolis_hastings"
 run "autocorrelation/N64_wolff"
 run "autocorrelation/N64_metropolis_hastings"
