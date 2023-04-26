@@ -7,6 +7,7 @@ from enum import StrEnum, auto
 from jackpot.algorithms.base import Algorithm
 from jackpot.algorithms.glauber import GlauberAlgorithm
 from jackpot.algorithms.metropolis_hastings import MetropolisHastingsAlgorithm
+from jackpot.algorithms.swendsen_wang import SwendsenWangAlgorithm
 from jackpot.algorithms.wolff import WolffAlgorithm
 
 
@@ -14,7 +15,7 @@ class AlgorithmChoice(StrEnum):
     METROPOLIS_HASTINGS = auto()
     GLAUBER = auto()
     WOLFF = auto()
-    # SWENDSEN_WANG = auto()
+    SWENDSEN_WANG = auto()
 
     def resolve(self) -> type[Algorithm]:
         """
@@ -31,6 +32,9 @@ class AlgorithmChoice(StrEnum):
 
             case AlgorithmChoice.WOLFF:
                 return WolffAlgorithm
+
+            case AlgorithmChoice.SWENDSEN_WANG:
+                return SwendsenWangAlgorithm
 
             case _:  # Makes mypy shut up
                 raise ValueError("Invalid algorithm choice.")
