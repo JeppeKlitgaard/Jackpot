@@ -26,6 +26,6 @@ __pycache__
 
 # Experiments
 # parameters/
-# experiments/
+experiments/last
 *.log
 *.eqx
