@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 
 # TODO: Move into model class.
-def get_trial_spin(*, rng_key: RNGKey, state: State, current_spin: float) -> TSpin:
+def get_trial_spin(*, rng_key: RNGKey, state: State, current_spin: TSpin) -> TSpin:
     """
     Returns a new spin that is guaranteed to be different to `current_spin`.
     This is achieved in an efficient and deterministic manner using the `lax.switch`
